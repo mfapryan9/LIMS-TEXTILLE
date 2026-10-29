@@ -1,0 +1,210 @@
+// LIMS Priority Scheduling – PT Nagasakti
+// Database: Neon (PostgreSQL serverless). Gunakan DATABASE_URL (pooled) dan DIRECT_URL (unpooled, untuk migrate).
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+// ───────────── ENUMS ─────────────
+
+enum OrderType {
+  PRODUKSI
+  MARKETING
+}
+
+enum SampleStatus {
+  MENUNGGU
+  DALAM_PROSES
+  MENUNGGU_APPROVAL
+  DISETUJUI
+  MATCHING_ULANG
+}
+
+enum TrialStatus {
+  BERJALAN
+  SELESAI
+}
+
+enum ApprovalDecision {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+// Menentukan tampilan dashboard per role (FR-09)
+enum ViewMode {
+  OPERATOR   // antrean kerja, Mulai/Selesai Uji, input percobaan
+  APPROVER   // daftar approval, Approve/Reject
+  PLANNER    // PPIC & Marketing: kesiapan sampel, ubah due date, tandai urgent
+  MONITOR    // read-only (Kasi, Kepala Lab, Kepala PPIC, Kepala Marketing)
+}
+
+// ───────────── AKSES ─────────────
+
+model Role {
+  id          String   @id @default(cuid())
+  code        String   @unique // OPERATOR_LAB, KAUR_LAB, KASI, KALAB, PPIC, KEPALA_PPIC, MARKETING, KEPALA_MARKETING, ADMIN
+  name        String
+  viewMode    ViewMode
+  canApprove  Boolean  @default(false) // true hanya untuk Kepala Urusan Lab
+  canEditDue  Boolean  @default(false) // PPIC & Marketing
+  canMarkUrgent Boolean @default(false) // PPIC & Marketing
+  canManageMaster Boolean @default(false) // input/ubah waktu proses standar (p)
+  users       User[]
+
+  @@map("roles")
+}
+
+model User {
+  id                  String   @id @default(cuid())
+  name                String
+  email               String   @unique
+  passwordHash        String
+  roleId              String
+  role                Role     @relation(fields: [roleId], references: [id])
+  isActive            Boolean  @default(true)
+  notificationsSeenAt DateTime? // untuk badge "belum dibaca" di header
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  samplesCreated  Sample[]    @relation("SampleCreatedBy")
+  samplesUrgent   Sample[]    @relation("SampleUrgentBy")
+  trialsRun       TestTrial[] @relation("TrialOperator")
+  trialsDecided   TestTrial[] @relation("TrialApprover")
+  auditLogs       AuditLog[]
+
+  @@map("users")
+}
+
+// ───────────── MASTER DATA ─────────────
+
+model ProcessType {
+  id        String @id @default(cuid())
+  code      String @unique
+  name      String
+  isActive  Boolean @default(true)
+
+  samples     Sample[]
+  processTimes MasterProcessTime[]
+
+  @@map("process_types")
+}
+
+model Machine {
+  id        String @id @default(cuid())
+  code      String @unique
+  name      String
+  isActive  Boolean @default(true)
+
+  samples      Sample[]
+  processTimes MasterProcessTime[]
+
+  @@map("machines")
+}
+
+// p = waktu proses standar (HARI) per kombinasi [Proses Lab + Mesin]
+model MasterProcessTime {
+  id            String   @id @default(cuid())
+  processTypeId String
+  machineId     String
+  standardDays  Decimal  @db.Decimal(6, 2) // harus > 0 (divalidasi di aplikasi + CHECK di migration)
+  updatedAt     DateTime @updatedAt
+
+  processType ProcessType @relation(fields: [processTypeId], references: [id])
+  machine     Machine     @relation(fields: [machineId], references: [id])
+
+  @@unique([processTypeId, machineId])
+  @@map("master_process_times")
+}
+
+// ───────────── TRANSAKSI ─────────────
+
+model Sample {
+  id                 String       @id @default(cuid())
+  orderType          OrderType
+  spkNo              String
+  customerName       String
+  motif              String
+  colorDirection     String       // Arah warna
+  colorCode          String       // Kode warna (CM)
+  processTypeId      String
+  fabricProblem      String?
+  problemDescription String?
+  receivedDate       DateTime     @db.Date
+  dueDate            DateTime     @db.Date // default received + 7 hari (diatur di form), bisa diubah
+  machineId          String
+  status             SampleStatus @default(MENUNGGU)
+
+  isUrgent       Boolean   @default(false)
+  urgentReason   String?
+  urgentById     String?
+  urgentAt       DateTime?
+
+  createdById String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  processType ProcessType @relation(fields: [processTypeId], references: [id])
+  machine     Machine     @relation(fields: [machineId], references: [id])
+  createdBy   User        @relation("SampleCreatedBy", fields: [createdById], references: [id])
+  urgentBy    User?       @relation("SampleUrgentBy", fields: [urgentById], references: [id])
+  trials      TestTrial[]
+  auditLogs   AuditLog[]
+
+  // Satu SPK bisa memuat beberapa warna → unik per (SPK + kode warna)
+  @@unique([spkNo, colorCode])
+  @@index([status])
+  @@index([dueDate])
+  @@index([customerName])
+  @@map("samples")
+}
+
+// Percobaan ke-n untuk satu sampel
+model TestTrial {
+  id          String      @id @default(cuid())
+  sampleId    String
+  trialNo     Int         // percobaan ke-n
+  operatorId  String
+  status      TrialStatus @default(BERJALAN)
+  startedAt   DateTime    @default(now())
+  finishedAt  DateTime?
+  notes       String?     // formula / catatan hasil
+
+  // Approval (hanya Kepala Urusan Lab)
+  decision    ApprovalDecision @default(PENDING)
+  approverId  String?
+  decidedAt   DateTime?
+  rejectNote  String?     // wajib diisi saat REJECTED (rework)
+
+  sample   Sample @relation(fields: [sampleId], references: [id], onDelete: Cascade)
+  operator User   @relation("TrialOperator", fields: [operatorId], references: [id])
+  approver User?  @relation("TrialApprover", fields: [approverId], references: [id])
+
+  @@unique([sampleId, trialNo])
+  @@map("test_trials")
+}
+
+model AuditLog {
+  id        String   @id @default(cuid())
+  userId    String
+  sampleId  String?
+  action    String   // SAMPLE_CREATED, DUE_DATE_CHANGED, URGENT_MARKED, TRIAL_STARTED, TRIAL_FINISHED, APPROVED, REJECTED, ...
+  entity    String   // Sample | TestTrial | MasterProcessTime | User
+  entityId  String
+  before    Json?
+  after     Json?
+  createdAt DateTime @default(now())
+
+  user   User    @relation(fields: [userId], references: [id])
+  sample Sample? @relation(fields: [sampleId], references: [id], onDelete: SetNull)
+
+  @@index([entity, entityId])
+  @@index([createdAt])
+  @@map("audit_logs")
+}
