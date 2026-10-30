@@ -1,13 +1,14 @@
 "use client";
 
 import Image from "next/image";
+import { BadgeCheck, CalendarDays, ListChecks, LogOut, RefreshCw, ScanLine, Zap } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import type { Notif, SessionUser, ViewMode } from "@/lib/roles";
 import { VIEW_DEFAULT_STATUSES } from "@/lib/roles";
 import { defaultDueDate, todayJakarta, type SampleStatusKey } from "@/lib/cr";
 import type { SampleFormResult, SampleInput } from "@/lib/sample-input";
-import type { SampleRow } from "./badges";
+import { initials, type SampleRow } from "./badges";
 import { applyFilters, DEFAULT_FILTERS, FilterBar, MachineGroupTabs, NotificationBell, StatsStrip, type Filters, type MachineGroup } from "./header-parts";
 import { ResultsTable } from "./ResultsTable";
 import { SampleForm } from "./SampleForm";
@@ -102,21 +103,87 @@ export function DashboardClient(props: {
     };
   };
 
+  const doneCount = rows.filter((r) => r.status === "DISETUJUI").length;
+  const activeCount = rows.length - doneCount;
+  const urgentCount = rows.filter((r) => r.isUrgent && r.status !== "DISETUJUI").length;
+  const nav = [
+    { key: "queue" as const, label: "Antrean uji", icon: ListChecks, count: activeCount },
+    ...(showResults ? [{ key: "results" as const, label: "Hasil uji selesai", icon: BadgeCheck, count: doneCount }] : []),
+  ];
+  const roleLabel = user.roleCode.replaceAll("_", " ").toLowerCase();
+
   return (
-    <div className="min-h-screen bg-canvas text-ink">
-      <header className="sticky top-0 z-20 border-b border-line bg-white/95 backdrop-blur">
-        <div className="mx-auto flex max-w-[90rem] items-center justify-between gap-4 px-4 py-2.5">
+    <div className="min-h-screen bg-canvas text-ink xl:pl-64">
+      {/* ── Sidebar (desktop) */}
+      <aside className="fixed inset-y-0 left-0 z-30 hidden w-64 flex-col border-r border-line bg-white xl:flex">
+        <div className="flex items-center gap-3 px-6 py-5">
+          <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-gradient-to-br from-brand-800 to-brand-600 shadow-glow">
+            <Image src="/logo-emblem-white.png" alt="Logo PT Nagasakti Kurnia Textile Mills" width={28} height={28} priority className="h-7 w-7" />
+          </span>
+          <div className="leading-tight">
+            <p className="text-sm font-bold tracking-wide text-ink">NAGASAKTI</p>
+            <p className="text-xs text-ink-soft">Kurnia Textile Mills</p>
+          </div>
+        </div>
+
+        <p className="px-6 pb-2 pt-4 text-[11px] font-semibold uppercase tracking-wider text-ink-soft">Lab Color Matching</p>
+        <div role="tablist" aria-label="Menu" aria-orientation="vertical" className="space-y-1 px-3">
+          {nav.map(({ key, label, icon: Icon, count }) => {
+            const sel = tab === key;
+            return (
+              <button key={key} type="button" role="tab" aria-selected={sel} onClick={() => setTab(key)}
+                className={`flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold transition ${sel ? "bg-brand-50 text-brand-800" : "text-ink-muted hover:bg-canvas hover:text-ink"}`}>
+                <Icon className={`h-[18px] w-[18px] ${sel ? "text-brand-600" : ""}`} aria-hidden />
+                <span className="flex-1 text-left">{label}</span>
+                <span className={`rounded-full px-2 py-0.5 text-xs tabular-nums ${sel ? "bg-white text-brand-700 ring-1 ring-brand-200" : "bg-canvas text-ink-soft"}`}>{count}</span>
+              </button>
+            );
+          })}
+        </div>
+
+        {urgentCount > 0 && (
+          <button type="button" onClick={() => { setTab("queue"); setFilters({ ...DEFAULT_FILTERS, urgency: "URGENT" }); }}
+            className="mx-3 mt-6 flex items-center gap-3 rounded-2xl bg-gradient-to-br from-fuchsia-600 to-pink-500 p-4 text-left text-white shadow-[0_10px_30px_-10px_rgba(192,38,211,0.6)] transition hover:brightness-105">
+            <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-white/20"><Zap className="h-5 w-5 fill-white" aria-hidden /></span>
+            <span className="leading-tight">
+              <span className="block text-sm font-bold">{urgentCount} sampel urgent</span>
+              <span className="block text-xs text-white/80">Lihat & kerjakan lebih dulu</span>
+            </span>
+          </button>
+        )}
+
+        <div className="mt-auto border-t border-line p-4">
+          <div className="flex items-center gap-3 rounded-2xl bg-canvas p-3">
+            <span aria-hidden className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-brand-500 to-brand-700 text-sm font-bold text-white">{initials(user.name)}</span>
+            <span className="min-w-0 flex-1 leading-tight">
+              <span className="block truncate text-sm font-semibold text-ink">{user.name}</span>
+              <span className="block truncate text-xs capitalize text-ink-soft">{roleLabel}</span>
+            </span>
+            {onLogout && (
+              <form action={onLogout}>
+                <button type="submit" aria-label="Keluar" title="Keluar" className="rounded-lg p-2 text-ink-soft transition hover:bg-white hover:text-rose-600">
+                  <LogOut className="h-[18px] w-[18px]" aria-hidden />
+                </button>
+              </form>
+            )}
+          </div>
+        </div>
+      </aside>
+
+      {/* ── Top bar */}
+      <header className="sticky top-0 z-20 border-b border-line bg-canvas/80 backdrop-blur-xl">
+        <div className="mx-auto flex max-w-[96rem] items-center justify-between gap-3 px-4 py-3 sm:px-6 xl:px-8">
           <div className="flex min-w-0 items-center gap-3">
-            <Image src="/logo-emblem.png" alt="Logo PT Nagasakti Kurnia Textile Mills" width={40} height={40} priority className="h-10 w-10 shrink-0" />
+            <Image src="/logo-emblem.png" alt="Logo PT Nagasakti Kurnia Textile Mills" width={36} height={36} priority className="h-9 w-9 shrink-0 xl:hidden" />
             <div className="min-w-0 leading-tight">
-              <p className="truncate text-sm font-semibold tracking-wide text-ink">
-                <span className="sm:hidden">NAGASAKTI</span>
-                <span className="hidden sm:inline">PT. NAGASAKTI KURNIA TEXTILE MILLS</span>
-              </p>
-              <p className="truncate text-xs text-brand-700">LIMS Lab Color Matching</p>
+              <p className="hidden text-xs font-medium text-ink-soft sm:block">PT. Nagasakti Kurnia Textile Mills · LIMS</p>
+              <p className="truncate text-sm font-semibold text-ink sm:text-base">{tab === "results" ? "Hasil uji selesai" : copy.title}</p>
             </div>
           </div>
-          <div className="flex items-center gap-1 sm:gap-3">
+          <div className="flex items-center gap-2">
+            <span className="hidden items-center gap-2 rounded-xl bg-white px-3 py-2 text-xs font-medium text-ink-muted ring-1 ring-line md:inline-flex">
+              <CalendarDays className="h-4 w-4 text-brand-600" aria-hidden /> {todayLabel()}
+            </span>
             <NotificationBell
               notifs={notifs}
               onMarkSeen={() => actions.markNotificationsSeen()}
@@ -126,19 +193,21 @@ export function DashboardClient(props: {
                 setHighlight(id);
               }}
             />
-            <div className="hidden items-center gap-2 sm:flex">
-              <span aria-hidden className="flex h-8 w-8 items-center justify-center rounded-full bg-brand-100 text-xs font-semibold text-brand-800">
-                {user.name.split(" ").map((w) => w[0]).slice(0, 2).join("").toUpperCase()}
-              </span>
-              <p className="text-xs leading-tight">
-                <span className="block font-medium text-ink">{user.name}</span>
-                <span className="block text-ink-muted">{user.roleCode.replaceAll("_", " ").toLowerCase()}</span>
-              </p>
-            </div>
+            {canEdit && (
+              <button
+                type="button"
+                onClick={() => setForm({ mode: "create" })}
+                className="inline-flex items-center gap-2 rounded-xl bg-brand-600 px-3.5 py-2.5 text-sm font-semibold text-white shadow-glow transition hover:bg-brand-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-600"
+              >
+                <ScanLine className="h-4 w-4" aria-hidden />
+                <span className="hidden sm:inline">Tambah SPK</span>
+                <span className="sm:hidden">SPK</span>
+              </button>
+            )}
             {onLogout && (
-              <form action={onLogout}>
-                <button type="submit" className="rounded-lg px-3 py-1.5 text-sm text-ink-muted hover:bg-canvas hover:text-ink focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand-600">
-                  Keluar
+              <form action={onLogout} className="xl:hidden">
+                <button type="submit" aria-label="Keluar" className="flex h-10 w-10 items-center justify-center rounded-xl bg-white text-ink-muted ring-1 ring-line">
+                  <LogOut className="h-[18px] w-[18px]" aria-hidden />
                 </button>
               </form>
             )}
@@ -146,47 +215,29 @@ export function DashboardClient(props: {
         </div>
       </header>
 
-      <main className="mx-auto max-w-[90rem] space-y-5 px-4 py-6">
-        <div className="flex flex-wrap items-end justify-between gap-3">
-          <div>
-            <h1 className="text-xl font-semibold text-ink">{tab === "results" ? "Hasil uji selesai" : copy.title}</h1>
-            <p className="mt-0.5 text-sm text-ink-muted">
-              {tab === "results"
-                ? "Sampel yang sudah di-ACC: jumlah uji/matching dengan master, ACC pada uji ke berapa, dan durasi sejak masuk lab."
-                : copy.hint}
+      <main className="mx-auto max-w-[96rem] space-y-6 px-4 py-6 sm:px-6 xl:px-8">
+        {/* Judul halaman */}
+        <div className="animate-fade-up">
+          <h1 className="text-2xl font-bold tracking-tight text-ink sm:text-3xl">{tab === "results" ? "Hasil uji selesai" : copy.title}</h1>
+          <p className="mt-1 max-w-3xl text-sm text-ink-muted">
+            {tab === "results"
+              ? "Sampel yang sudah di-ACC: jumlah uji/matching dengan master, ACC pada uji ke berapa, dan durasi sejak masuk lab."
+              : copy.hint}
+          </p>
+          {tab === "queue" && (
+            <p className="mt-2 inline-flex items-center gap-1.5 rounded-full bg-brand-50 px-3 py-1 text-xs font-medium text-brand-800 ring-1 ring-brand-100">
+              <RefreshCw className="h-3.5 w-3.5" aria-hidden /> CR dihitung terhadap hari ini ({fmtDate(todayJakarta())}) dan diperbarui otomatis
             </p>
-            {tab === "queue" && <p className="mt-1 text-xs text-ink-soft">CR dihitung terhadap tanggal hari ini ({fmtDate(todayJakarta())}) dan diperbarui otomatis.</p>}
-          </div>
-          {canEdit && (
-            <button
-              type="button"
-              onClick={() => setForm({ mode: "create" })}
-              className="inline-flex items-center gap-2 rounded-lg bg-brand-700 px-4 py-2 text-sm font-semibold text-white shadow-card hover:bg-brand-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-600"
-            >
-              <svg aria-hidden viewBox="0 0 20 20" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M3 6.5A1.5 1.5 0 0 1 4.5 5h2l1.2-1.5h4.6L13.5 5h2A1.5 1.5 0 0 1 17 6.5v8a1.5 1.5 0 0 1-1.5 1.5h-11A1.5 1.5 0 0 1 3 14.5z" />
-                <circle cx="10" cy="10.5" r="2.8" />
-              </svg>
-              Tambah SPK
-            </button>
           )}
         </div>
 
+        {/* Menu tampilan (layar < 1280px; desktop memakai sidebar) */}
         {showResults && (
-          <div role="tablist" aria-label="Tampilan" className="inline-flex rounded-lg bg-white p-1 shadow-card ring-1 ring-line">
-            {([
-              ["queue", "Antrean uji"],
-              ["results", `Hasil uji selesai (${rows.filter((r) => r.status === "DISETUJUI").length})`],
-            ] as const).map(([key, label]) => (
-              <button
-                key={key}
-                type="button"
-                role="tab"
-                aria-selected={tab === key}
-                onClick={() => setTab(key)}
-                className={`rounded-md px-3.5 py-1.5 text-sm font-medium transition ${tab === key ? "bg-brand-700 text-white" : "text-ink-muted hover:bg-canvas hover:text-ink"}`}
-              >
-                {label}
+          <div role="tablist" aria-label="Tampilan" className="inline-flex rounded-xl bg-white p-1 shadow-card ring-1 ring-line xl:hidden">
+            {nav.map(({ key, label, count }) => (
+              <button key={key} type="button" role="tab" aria-selected={tab === key} onClick={() => setTab(key)}
+                className={`rounded-lg px-3.5 py-2 text-sm font-semibold transition ${tab === key ? "bg-ink text-white" : "text-ink-muted hover:text-ink"}`}>
+                {label} <span className="opacity-60">({count})</span>
               </button>
             ))}
           </div>
@@ -200,12 +251,13 @@ export function DashboardClient(props: {
 
             <StatsStrip rows={groupRows} active={filters.status} onPick={(status) => setFilters((f) => ({ ...f, status }))} />
 
-            <FilterBar value={filters} onChange={setFilters} />
-
-            <p className="text-xs text-ink-soft" aria-live="polite">
-              Menampilkan {visible.length} dari {groupRows.length} sampel
-              {filters.machineId !== "ALL" && ` di ${machines.find((m) => m.id === filters.machineId)?.name ?? "kelompok ini"}`}
-            </p>
+            <div className="space-y-3">
+              <FilterBar value={filters} onChange={setFilters} />
+              <p className="text-xs font-medium text-ink-soft" aria-live="polite">
+                Menampilkan {visible.length} dari {groupRows.length} sampel
+                {filters.machineId !== "ALL" && ` di ${machines.find((m) => m.id === filters.machineId)?.name ?? "kelompok ini"}`}
+              </p>
+            </div>
 
             <SampleTable rows={visible} user={user} actions={actions} highlightId={highlight} onEdit={canEdit ? (row) => setForm({ mode: "edit", row }) : undefined} />
           </>
@@ -227,3 +279,6 @@ export function DashboardClient(props: {
     </div>
   );
 }
+
+const dayFmt = new Intl.DateTimeFormat("id-ID", { weekday: "long", day: "numeric", month: "long", year: "numeric", timeZone: "Asia/Jakarta" });
+const todayLabel = () => dayFmt.format(new Date());
