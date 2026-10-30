@@ -21,8 +21,9 @@ export function DashboardClient(props: {
   notifs: Notif[];
   machines: { id: string; name: string }[];
   actions: SampleActions & { markNotificationsSeen: () => Promise<void> };
+  onLogout?: () => Promise<void>;
 }) {
-  const { user, rows, notifs, machines, actions } = props;
+  const { user, rows, notifs, machines, actions, onLogout } = props;
   const copy = VIEW_COPY[user.viewMode];
 
   // Tab default per role: operator → antrean aktif, approver → menunggu approval, lainnya → semua
@@ -69,6 +70,13 @@ export function DashboardClient(props: {
               <span className="block font-medium">{user.name}</span>
               <span className="block text-indigo-200">{user.roleCode.replaceAll("_", " ").toLowerCase()}</span>
             </p>
+            {onLogout && (
+              <form action={onLogout}>
+                <button type="submit" className="rounded-md px-3 py-1.5 text-sm text-indigo-50 hover:bg-white/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-white">
+                  Keluar
+                </button>
+              </form>
+            )}
           </div>
         </div>
       </header>
