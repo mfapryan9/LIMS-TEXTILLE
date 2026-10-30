@@ -2,6 +2,21 @@
 
 Aplikasi Web LIMS (Laboratory Information Management System) untuk pengujian sampel warna kain (Dyeing & Finishing).
 
+## Struktur
+
+```
+app/                      layout, halaman utama
+components/dashboard/     DashboardClient, SampleTable, header-parts, badges
+                          DemoDashboard: data contoh + aksi di browser (mode demo, tanpa database)
+lib/cr.ts                 Critical Ratio, urgensi, sortByPriority (+ cr.test.ts, jalankan: npm test)
+lib/roles.ts              role, guard assertCan, notifikasi
+prisma/schema.prisma      skema Neon PostgreSQL
+```
+
+Saat ini halaman utama berjalan dalam **mode demo**. Untuk memakai database, buat `lib/prisma.ts`, `lib/auth.ts`,
+dan `app/actions.ts` (lihat interface `SampleActions`), lalu ganti `DemoDashboard` dengan server component yang
+membaca data dari Prisma dan mengirimnya ke `DashboardClient`.
+
 ## Cara Menjalankan di Lokal
 
 1. Salin `.env.example` menjadi `.env` dan masukkan `DATABASE_URL` dari Neon DB.
