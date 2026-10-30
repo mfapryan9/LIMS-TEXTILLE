@@ -56,6 +56,7 @@ model Role {
   canEditDue  Boolean  @default(false) // PPIC & Marketing
   canMarkUrgent Boolean @default(false) // PPIC & Marketing
   canManageMaster Boolean @default(false) // input/ubah waktu proses standar (p)
+  canEditSample Boolean @default(false) // tambah (scan) & edit SPK: Operator Lab, Kaur Lab, Kasi, PPIC, Marketing
   users       User[]
 
   @@map("roles")
@@ -113,7 +114,7 @@ model MasterProcessTime {
   id            String   @id @default(cuid())
   processTypeId String
   machineId     String
-  standardDays  Decimal  @db.Decimal(6, 2) // harus > 0 (divalidasi di aplikasi + CHECK di migration)
+  standardDays  Decimal  @db.Decimal(10, 6) // harus > 0 (CHECK di migration). Presisi tinggi agar CR sama dengan Excel (mis. 1.333333)
   updatedAt     DateTime @updatedAt
 
   processType ProcessType @relation(fields: [processTypeId], references: [id])
@@ -128,11 +129,13 @@ model MasterProcessTime {
 model Sample {
   id                 String       @id @default(cuid())
   orderType          OrderType
+  orderNo            String?      // NO. ORDER, mis. 26-3012
+  orderDate          DateTime?    @db.Date // TGL ORDER
   spkNo              String
-  customerName       String
-  motif              String
-  colorDirection     String       // Arah warna
-  colorCode          String       // Kode warna (CM)
+  customerName       String?
+  motif              String?
+  colorDirection     String?      // Arah warna
+  colorCode          String?      // Kode warna (CM)
   processTypeId      String
   fabricProblem      String?
   problemDescription String?

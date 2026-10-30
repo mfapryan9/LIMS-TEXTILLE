@@ -161,7 +161,7 @@ export function applyFilters(rows: SampleRow[], f: Filters): SampleRow[] {
     if (f.machineId !== "ALL" && r.machineId !== f.machineId) return false;
     if (f.urgency === "URGENT" && !r.isUrgent) return false;
     if ((f.urgency === "LATE" || f.urgency === "WARNING") && r.urgency !== f.urgency) return false;
-    if (q && ![r.spkNo, r.customerName, r.motif, r.colorCode, r.colorDirection].some((v) => v.toLowerCase().includes(q))) return false;
+    if (q && ![r.spkNo, r.orderNo, r.processName, r.customerName, r.motif, r.colorCode, r.colorDirection].some((v) => v?.toLowerCase().includes(q))) return false;
     return true; // urutan CR dipertahankan dari server (sortByPriority)
   });
 }
@@ -184,7 +184,7 @@ export function FilterBar({
         type="search"
         value={value.q}
         onChange={(e) => set("q", e.target.value)}
-        placeholder="Cari SPK, customer, motif, kode warna"
+        placeholder="Cari SPK, no. order, proses, customer, kode warna"
         aria-label="Cari sampel"
         className={`${field} min-w-[16rem] flex-1`}
       />

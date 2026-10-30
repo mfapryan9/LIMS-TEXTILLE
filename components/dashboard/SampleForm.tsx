@@ -116,11 +116,12 @@ export function SampleForm(props: {
   mode: "create" | "edit";
   initial: SampleInput;
   processTypes: Option[];
+  processMachine: Record<string, string>; // proses → mesin (kelompok sheet Excel)
   machines: Option[];
   onSubmit: (input: SampleInput) => Promise<SampleFormResult>;
   onClose: () => void;
 }) {
-  const { mode, processTypes, machines, onSubmit, onClose } = props;
+  const { mode, processTypes, processMachine, machines, onSubmit, onClose } = props;
   const [values, setValues] = useState<SampleInput>(props.initial);
   const [dueTouched, setDueTouched] = useState(mode === "edit");
   const [found, setFound] = useState<Set<SpkField>>(new Set());
@@ -143,6 +144,8 @@ export function SampleForm(props: {
     setValues((prev) => {
       const next = { ...prev, [k]: v };
       if (k === "receivedDate" && !dueTouched && typeof v === "string" && v) next.dueDate = defaultDueDate(v);
+      // Proses menentukan kelompok mesin (sheet Excel): isi mesin otomatis, tetap bisa diganti
+      if (k === "processTypeId" && typeof v === "string" && processMachine[v]) next.machineId = processMachine[v];
       return next;
     });
     if (k === "dueDate") setDueTouched(true);
@@ -162,6 +165,7 @@ export function SampleForm(props: {
         const next = { ...prev };
         for (const k of f) (next as Record<string, string>)[k] = draft[k] as string;
         if (draft.receivedDate && !draft.dueDate) next.dueDate = defaultDueDate(draft.receivedDate);
+        if (draft.processTypeId && !draft.machineId && processMachine[draft.processTypeId]) next.machineId = processMachine[draft.processTypeId];
         return next;
       });
       if (draft.dueDate) setDueTouched(true);
@@ -185,7 +189,7 @@ export function SampleForm(props: {
       // SPK yang sama, warna berikutnya: pertahankan data SPK, kosongkan data warna
       setValues((v) => ({ ...v, colorCode: "", colorDirection: "" }));
       setFound((f) => new Set(Array.from(f).filter((k) => k !== "colorCode" && k !== "colorDirection")));
-      setNotice(`Tersimpan: ${values.spkNo} · ${values.colorCode}. Lanjutkan isi warna berikutnya.`);
+      setNotice(`Tersimpan: SPK ${values.spkNo}${values.colorCode ? ` · ${values.colorCode}` : ""}. Lanjutkan isi warna berikutnya.`);
     });
   }
 
@@ -253,17 +257,21 @@ export function SampleForm(props: {
             {error && <p role="alert" className="rounded-lg bg-rose-50 px-3 py-2 text-sm text-rose-700 ring-1 ring-rose-200">{error}</p>}
 
             <div className="grid gap-4 sm:grid-cols-2">
-              <Field fromPhoto={found.has("spkNo" as SpkField)} label="No. SPK">{text("spkNo", "SPK-2026-001")}</Field>
+              <Field fromPhoto={found.has("spkNo" as SpkField)} label="No. SPK">{text("spkNo", "mis. 2602108")}</Field>
+              <Field fromPhoto={found.has("orderNo" as SpkField)} label="No. order (opsional)">{text("orderNo", "mis. 26-3012")}</Field>
+              <Field fromPhoto={found.has("orderDate" as SpkField)} label="Tanggal order (opsional)">
+                <input type="date" value={values.orderDate} onChange={(e) => set("orderDate", e.target.value)} className={ring("orderDate")} />
+              </Field>
               <Field fromPhoto={found.has("orderType" as SpkField)} label="Jenis order">
                 <select value={values.orderType} onChange={(e) => set("orderType", e.target.value as SampleInput["orderType"])} className={ring("orderType")}>
                   <option value="PRODUKSI">Produksi</option>
                   <option value="MARKETING">Marketing</option>
                 </select>
               </Field>
-              <Field fromPhoto={found.has("customerName" as SpkField)} label="Customer">{text("customerName", "PT …")}</Field>
-              <Field fromPhoto={found.has("motif" as SpkField)} label="Motif">{text("motif")}</Field>
-              <Field fromPhoto={found.has("colorCode" as SpkField)} label="Kode warna (CM)">{text("colorCode", "CM-102")}</Field>
-              <Field fromPhoto={found.has("colorDirection" as SpkField)} label="Arah warna">{text("colorDirection", "mis. lebih biru")}</Field>
+              <Field fromPhoto={found.has("customerName" as SpkField)} label="Customer (opsional)">{text("customerName", "PT …")}</Field>
+              <Field fromPhoto={found.has("motif" as SpkField)} label="Motif (opsional)">{text("motif")}</Field>
+              <Field fromPhoto={found.has("colorCode" as SpkField)} label="Kode warna (opsional)">{text("colorCode", "CM-102")}</Field>
+              <Field fromPhoto={found.has("colorDirection" as SpkField)} label="Arah warna (opsional)">{text("colorDirection", "mis. lebih biru")}</Field>
               <Field fromPhoto={found.has("processTypeId" as SpkField)} label="Proses lab">
                 <select value={values.processTypeId} onChange={(e) => set("processTypeId", e.target.value)} className={ring("processTypeId")}>
                   <option value="">Pilih proses</option>

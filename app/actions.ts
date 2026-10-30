@@ -137,11 +137,13 @@ const toDate = (iso: string) => new Date(`${iso}T00:00:00Z`);
 function sampleData(d: SampleInput) {
   return {
     orderType: d.orderType,
+    orderNo: d.orderNo || null,
+    orderDate: d.orderDate ? toDate(d.orderDate) : null,
     spkNo: d.spkNo,
-    customerName: d.customerName,
-    motif: d.motif,
-    colorDirection: d.colorDirection,
-    colorCode: d.colorCode,
+    customerName: d.customerName || null,
+    motif: d.motif || null,
+    colorDirection: d.colorDirection || null,
+    colorCode: d.colorCode || null,
     processTypeId: d.processTypeId,
     machineId: d.machineId,
     fabricProblem: d.fabricProblem || null,

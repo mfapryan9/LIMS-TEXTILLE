@@ -11,18 +11,19 @@ export interface SessionUser {
   canEditDue: boolean;
   canMarkUrgent: boolean;
   canManageMaster: boolean;
+  canEditSample: boolean;
   notificationsSeenAt: string | null;
 }
 
-/** Seed untuk tabel roles. Approval utama HANYA KAUR_LAB; role atasan = MONITOR (read-only). */
+/** Seed untuk tabel roles. "Kepala" (Kaur Lab & Kasi) = approver; Operator & Kepala bisa tambah (scan) / edit SPK. */
 export const ROLE_SEED = [
-  { code: "OPERATOR_LAB", name: "Operator Lab", viewMode: "OPERATOR" },
-  { code: "KAUR_LAB", name: "Kepala Urusan Laboratorium", viewMode: "APPROVER", canApprove: true, canManageMaster: true },
-  { code: "KASI", name: "Kepala Seksi", viewMode: "MONITOR" },
+  { code: "OPERATOR_LAB", name: "Operator Lab", viewMode: "OPERATOR", canEditSample: true },
+  { code: "KAUR_LAB", name: "Kepala Urusan Laboratorium", viewMode: "APPROVER", canApprove: true, canEditSample: true, canManageMaster: true },
+  { code: "KASI", name: "Kepala Seksi", viewMode: "APPROVER", canApprove: true, canEditSample: true },
   { code: "KALAB", name: "Kepala Laboratorium", viewMode: "MONITOR" },
-  { code: "PPIC", name: "PPIC", viewMode: "PLANNER", canEditDue: true, canMarkUrgent: true },
+  { code: "PPIC", name: "PPIC", viewMode: "PLANNER", canEditDue: true, canMarkUrgent: true, canEditSample: true },
   { code: "KEPALA_PPIC", name: "Kepala PPIC", viewMode: "MONITOR" },
-  { code: "MARKETING", name: "Marketing", viewMode: "PLANNER", canEditDue: true, canMarkUrgent: true },
+  { code: "MARKETING", name: "Marketing", viewMode: "PLANNER", canEditDue: true, canMarkUrgent: true, canEditSample: true },
   { code: "KEPALA_MARKETING", name: "Kepala Marketing", viewMode: "MONITOR" },
   { code: "ADMIN", name: "Admin Sistem", viewMode: "MONITOR", canManageMaster: true },
 ] as const;
@@ -40,8 +41,7 @@ export function assertCan(user: SessionUser, action: "approve" | "editDue" | "ma
   const ok =
     (action === "approve" && user.canApprove) ||
     (action === "editDue" && user.canEditDue) ||
-    (action === "editSample" && user.canEditDue) || // PPIC & Marketing menginput / mengoreksi data SPK
-
+    (action === "editSample" && user.canEditSample) ||
     (action === "markUrgent" && user.canMarkUrgent) ||
     (action === "manageMaster" && user.canManageMaster) ||
     (action === "runTrial" && user.viewMode === "OPERATOR");
@@ -64,7 +64,7 @@ export interface Notif {
 const NEW_WINDOW_MS = 24 * 3600 * 1000;
 
 export function deriveNotifications(
-  rows: WithCR<SchedulableSample & { spkNo: string; customerName: string; colorCode: string }>[],
+  rows: WithCR<SchedulableSample & { spkNo: string; customerName: string | null; colorCode: string | null }>[],
   seenAt: string | null,
   now: Date = new Date(),
 ): Notif[] {
@@ -73,19 +73,20 @@ export function deriveNotifications(
 
   for (const s of rows) {
     if (s.status === "DISETUJUI") continue;
-    const label = `${s.spkNo} · ${s.colorCode}`;
+    const label = s.colorCode ? `${s.spkNo} · ${s.colorCode}` : `SPK ${s.spkNo}`;
+    const customer = s.customerName ?? "";
     const created = new Date(s.createdAt).getTime();
 
     if (s.urgency === "LATE") {
-      out.push({ key: `late-${s.id}`, type: "LATE", sampleId: s.id, title: `${label} terlambat`, detail: `Lewat ${Math.abs(s.daysLeft)} hari dari due date · ${s.customerName}`, unread: true });
+      out.push({ key: `late-${s.id}`, type: "LATE", sampleId: s.id, title: `${label} terlambat`, detail: `Lewat ${Math.abs(s.daysLeft)} hari dari due date${customer && ` · ${customer}`}`, unread: true });
     } else if (s.urgency === "WARNING") {
-      out.push({ key: `near-${s.id}`, type: "NEAR_DEADLINE", sampleId: s.id, title: `${label} mendekati deadline`, detail: `CR ${s.cr} · sisa ${s.daysLeft} hari · ${s.customerName}`, unread: true });
+      out.push({ key: `near-${s.id}`, type: "NEAR_DEADLINE", sampleId: s.id, title: `${label} mendekati deadline`, detail: `CR ${s.cr} · sisa ${s.daysLeft} hari${customer && ` · ${customer}`}`, unread: true });
     }
     if (s.isUrgent) {
-      out.push({ key: `urgent-${s.id}`, type: "URGENT", sampleId: s.id, title: `${label} ditandai URGENT`, detail: s.customerName, unread: true });
+      out.push({ key: `urgent-${s.id}`, type: "URGENT", sampleId: s.id, title: `${label} ditandai URGENT`, detail: customer || "Prioritas utama", unread: true });
     }
     if (now.getTime() - created < NEW_WINDOW_MS) {
-      out.push({ key: `new-${s.id}`, type: "NEW", sampleId: s.id, title: `Sampel baru ${label}`, detail: s.customerName, unread: created > seen });
+      out.push({ key: `new-${s.id}`, type: "NEW", sampleId: s.id, title: `Sampel baru ${label}`, detail: customer || "Masuk antrean lab", unread: created > seen });
     }
   }
   // Terlambat → urgent → mendekati → baru

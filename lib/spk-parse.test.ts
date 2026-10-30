@@ -67,6 +67,27 @@ describe("parseSpkText", () => {
     expect(draft.orderType).toBe("PRODUKSI");
   });
 
+  it("kartu SPK dengan kolom seperti Excel (No. Order, Tgl Order, Tgl Mulai diabaikan)", () => {
+    const text = [
+      "NO. ORDER : 26-3012",
+      "TGL ORDER : 01/09/2026",
+      "NO.SPK : 2602108",
+      "PROSES LAB : Dyeing Reaktif",
+      "TGL TERIMA : 02/09/2026",
+      "TGL MULAI : 03/09/2026",
+      "DUE DATE : 09/09/2026",
+    ].join("\n");
+    const { draft } = parseSpkText(text, masters);
+    expect(draft).toMatchObject({
+      orderNo: "26-3012",
+      orderDate: "2026-09-01",
+      spkNo: "2602108",
+      processTypeId: "p1",
+      receivedDate: "2026-09-02",
+      dueDate: "2026-09-09",
+    });
+  });
+
   it("cadangan pola tanpa label", () => {
     const text = "SPK-2026-140\nwarna cm-777 jet dyeing jd01\n01/11/2026 sampai 08/11/2026";
     const { draft } = parseSpkText(text, masters);

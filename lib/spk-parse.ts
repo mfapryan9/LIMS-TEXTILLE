@@ -10,6 +10,8 @@
 
 export interface SpkDraft {
   orderType?: "PRODUKSI" | "MARKETING";
+  orderNo?: string;
+  orderDate?: string; // YYYY-MM-DD
   spkNo?: string;
   customerName?: string;
   motif?: string;
@@ -30,10 +32,14 @@ interface Option {
 }
 
 type TextField = Exclude<SpkField, "orderType" | "processTypeId" | "machineId">;
-type LabelTarget = TextField | "orderType" | "process" | "machine";
+type LabelTarget = TextField | "orderType" | "process" | "machine" | "ignore";
 
 // Urutan penting: label yang lebih spesifik diperiksa dulu ("arah warna" sebelum "warna").
 const LABELS: [LabelTarget, string[]][] = [
+  ["orderNo", ["nomor order", "no. order", "no.order", "no order"]],
+  ["orderDate", ["tanggal order", "tgl. order", "tgl order"]],
+  // Kolom kartu SPK yang bukan input form; dikenali agar tidak tertangkap label lain ("tgl", "date")
+  ["ignore", ["tanggal mulai", "tgl. mulai", "tgl mulai", "tanggal selesai", "tgl. selesai", "tgl selesai", "duration", "durasi", "overdue", "critical ratio", "processing time"]],
   ["spkNo", ["nomor spk", "no. spk", "no.spk", "no spk", "spk no", "spk"]],
   ["customerName", ["nama customer", "nama pelanggan", "customer", "pelanggan", "buyer", "konsumen"]],
   ["colorDirection", ["arah warna", "color direction", "arah"]],
@@ -42,7 +48,7 @@ const LABELS: [LabelTarget, string[]][] = [
   ["process", ["jenis proses", "proses lab", "proses", "process"]],
   ["machine", ["mesin", "machine"]],
   ["fabricProblem", ["problem kain", "masalah kain", "problem", "kendala"]],
-  ["dueDate", ["due date", "deadline", "jatuh tempo", "tanggal kirim", "tgl kirim", "tgl. kirim", "tanggal selesai", "tgl selesai", "target"]],
+  ["dueDate", ["due date", "deadline", "jatuh tempo", "tanggal kirim", "tgl kirim", "tgl. kirim", "target"]],
   ["receivedDate", ["tanggal terima", "tgl terima", "tgl. terima", "tanggal masuk", "tgl masuk", "tanggal", "tgl", "date"]],
   ["orderType", ["jenis order", "tipe order", "order"]],
 ];
@@ -174,7 +180,10 @@ export function parseSpkText(
       if (!value) continue;
 
       switch (hit.target) {
+        case "ignore": break;
         case "spkNo": set("spkNo", normalizeSpk(value)); break;
+        case "orderNo": set("orderNo", clean(value).toUpperCase()); break;
+        case "orderDate": set("orderDate", parseDate(value)); break;
         case "colorCode": set("colorCode", normalizeColorCode(value)); break;
         case "receivedDate":
         case "dueDate": set(hit.target, parseDate(value)); break;
@@ -200,7 +209,7 @@ export function parseSpkText(
   if (!draft.processTypeId) set("processTypeId", matchOption(text, masters.processTypes));
   if (!draft.machineId) set("machineId", matchOption(text, masters.machines));
   if (!draft.receivedDate || !draft.dueDate) {
-    const dates = allDates(text).filter((d) => d !== draft.receivedDate && d !== draft.dueDate).sort();
+    const dates = allDates(text).filter((d) => d !== draft.receivedDate && d !== draft.dueDate && d !== draft.orderDate).sort();
     if (!draft.receivedDate && dates.length) set("receivedDate", dates.shift());
     if (!draft.dueDate && dates.length) set("dueDate", dates.pop());
   }

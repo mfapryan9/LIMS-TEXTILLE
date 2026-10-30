@@ -2,12 +2,14 @@ import type { SampleStatusKey, Urgency } from "@/lib/cr";
 
 export type SampleRow = {
   id: string;
+  orderNo: string | null;
+  orderDate: string | null; // YYYY-MM-DD
   spkNo: string;
   orderType: "PRODUKSI" | "MARKETING";
-  customerName: string;
-  motif: string;
-  colorDirection: string;
-  colorCode: string;
+  customerName: string | null;
+  motif: string | null;
+  colorDirection: string | null;
+  colorCode: string | null;
   processName: string;
   machineId: string;
   machineName: string;
@@ -18,10 +20,18 @@ export type SampleRow = {
   dueDate: string; // YYYY-MM-DD
   status: SampleStatusKey;
   isUrgent: boolean;
-  trialNo: number; // percobaan terakhir (0 = belum ada)
+  trialNo: number; // jumlah uji / matching warna dengan master (0 = belum pernah)
+  rejectedCount: number; // berapa kali ditolak (rework)
+  lastRejectNote: string | null; // alasan rework terakhir, untuk operator
   openTrialId: string | null; // percobaan yang sedang berjalan
   pendingTrialId: string | null; // percobaan yang menunggu approval
+  approvedTrialNo: number | null; // di-ACC pada uji ke-n
+  approvedAt: string | null; // YYYY-MM-DD (WIB)
+  approverName: string | null;
+  approvedNotes: string | null; // catatan/formula percobaan yang di-ACC
+  labDays: number; // lama di lab: masuk lab → ACC (atau → hari ini bila belum selesai)
   cr: number | null;
+  crAtOrder: number | null; // CR saat order masuk (t = TGL ORDER), sama dengan perhitungan Excel
   daysLeft: number;
   urgency: Urgency;
   standardDays: number | null;
@@ -31,7 +41,7 @@ export const STATUS_LABEL: Record<SampleStatusKey, string> = {
   MENUNGGU: "Menunggu",
   DALAM_PROSES: "Dalam proses",
   MENUNGGU_APPROVAL: "Menunggu approval",
-  DISETUJUI: "Disetujui",
+  DISETUJUI: "Disetujui (ACC)",
   MATCHING_ULANG: "Matching ulang",
 };
 
@@ -71,10 +81,28 @@ export function CrBadge({ cr, urgency, daysLeft }: Pick<SampleRow, "cr" | "urgen
   );
 }
 
+/** Sengaja mencolok (satu-satunya warna jenuh di tabel) agar sampel urgent langsung terlihat. */
 export function UrgentBadge() {
-  return <span className={`${pill} bg-fuchsia-100 text-fuchsia-800 ring-fuchsia-300 font-semibold tracking-wide`}>URGENT</span>;
+  return (
+    <span className="inline-flex items-center gap-1.5 whitespace-nowrap rounded-full bg-fuchsia-600 px-2.5 py-0.5 text-xs font-bold tracking-wider text-white shadow-sm ring-2 ring-fuchsia-300">
+      <span className="relative flex h-2 w-2" aria-hidden>
+        <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-white opacity-75 motion-reduce:animate-none" />
+        <span className="relative inline-flex h-2 w-2 rounded-full bg-white" />
+      </span>
+      URGENT
+    </span>
+  );
 }
 
-/** Titik warna kecil berdasarkan stempel urgensi untuk tepi kiri baris. */
+/** Aksen tepi kiri & latar baris. Urgent: latar fuchsia + garis tebal agar menonjol dari baris lain. */
 export const rowAccent = (u: Urgency, urgent: boolean) =>
-  urgent ? "border-l-fuchsia-400" : u === "LATE" ? "border-l-rose-400" : u === "WARNING" ? "border-l-amber-300" : "border-l-transparent";
+  urgent
+    ? "border-l-[6px] border-l-fuchsia-600 bg-fuchsia-50"
+    : u === "LATE"
+      ? "border-l-4 border-l-rose-400"
+      : u === "WARNING"
+        ? "border-l-4 border-l-amber-300"
+        : "border-l-4 border-l-transparent";
+
+/** "3 hari", atau "< 1 hari" bila masih di hari yang sama */
+export const fmtDays = (n: number) => (n <= 0 ? "< 1 hari" : `${n} hari`);

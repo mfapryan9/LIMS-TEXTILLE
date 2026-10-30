@@ -1,6 +1,7 @@
 "use client";
 
 import Image from "next/image";
+import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import type { Notif, SessionUser, ViewMode } from "@/lib/roles";
 import { VIEW_DEFAULT_STATUSES } from "@/lib/roles";
@@ -8,12 +9,13 @@ import { defaultDueDate, todayJakarta, type SampleStatusKey } from "@/lib/cr";
 import type { SampleFormResult, SampleInput } from "@/lib/sample-input";
 import type { SampleRow } from "./badges";
 import { applyFilters, DEFAULT_FILTERS, FilterBar, NotificationBell, StatsStrip, type Filters } from "./header-parts";
+import { ResultsTable } from "./ResultsTable";
 import { SampleForm } from "./SampleForm";
-import { SampleTable, type SampleActions } from "./SampleTable";
+import { fmtDate, SampleTable, type SampleActions } from "./SampleTable";
 
 const VIEW_COPY: Record<ViewMode, { title: string; hint: string }> = {
-  OPERATOR: { title: "Antrean kerja lab", hint: "Kerjakan dari atas ke bawah. Urutan mengikuti Critical Ratio terkecil." },
-  APPROVER: { title: "Menunggu approval", hint: "Setujui hasil matching atau kirim kembali untuk rework." },
+  OPERATOR: { title: "Antrean kerja lab", hint: "Kerjakan dari atas ke bawah: sampel URGENT paling atas, lalu Critical Ratio terkecil." },
+  APPROVER: { title: "Menunggu approval", hint: "ACC hasil matching warna atau kirim kembali untuk rework. Tambah dan edit SPK juga tersedia." },
   PLANNER: { title: "Kesiapan sampel", hint: "Tambah SPK, pantau kesiapan, ubah due date, atau tandai sampel urgent." },
   MONITOR: { title: "Monitoring sampel", hint: "Tampilan hanya-lihat untuk seluruh antrean lab." },
 };
@@ -22,13 +24,15 @@ type Option = { id: string; name: string };
 
 export interface SampleEditor {
   processTypes: Option[];
+  processMachine: Record<string, string>; // proses → mesin (kelompok sheet Excel), untuk isi otomatis
   create: (input: SampleInput) => Promise<SampleFormResult>;
   update: (sampleId: string, input: SampleInput) => Promise<SampleFormResult>;
 }
 
 const toInput = (r: SampleRow): SampleInput => ({
-  orderType: r.orderType, spkNo: r.spkNo, customerName: r.customerName, motif: r.motif,
-  colorDirection: r.colorDirection, colorCode: r.colorCode, processTypeId: r.processTypeId, machineId: r.machineId,
+  orderType: r.orderType, orderNo: r.orderNo ?? "", orderDate: r.orderDate ?? "", spkNo: r.spkNo,
+  customerName: r.customerName ?? "", motif: r.motif ?? "", colorDirection: r.colorDirection ?? "", colorCode: r.colorCode ?? "",
+  processTypeId: r.processTypeId, machineId: r.machineId,
   fabricProblem: r.fabricProblem ?? "", problemDescription: r.problemDescription ?? "",
   receivedDate: r.receivedDate, dueDate: r.dueDate,
 });
@@ -44,7 +48,22 @@ export function DashboardClient(props: {
 }) {
   const { user, rows, notifs, machines, actions, editor, onLogout } = props;
   const copy = VIEW_COPY[user.viewMode];
-  const canEdit = !!editor && user.canEditDue;
+  const canEdit = !!editor && user.canEditSample;
+  const showResults = user.viewMode !== "OPERATOR";
+  const [tab, setTab] = useState<"queue" | "results">("queue");
+  const router = useRouter();
+
+  // CR dihitung terhadap "hari ini": muat ulang data berkala & saat tab kembali aktif,
+  // sehingga CR, sisa hari, dan urutan ikut berubah saat tanggal berganti.
+  useEffect(() => {
+    const refresh = () => document.visibilityState === "visible" && router.refresh();
+    const timer = setInterval(refresh, 5 * 60 * 1000);
+    document.addEventListener("visibilitychange", refresh);
+    return () => {
+      clearInterval(timer);
+      document.removeEventListener("visibilitychange", refresh);
+    };
+  }, [router]);
 
   // Tab default per role: operator → antrean aktif, approver → menunggu approval, lainnya → semua
   const defaultStatuses = VIEW_DEFAULT_STATUSES[user.viewMode];
@@ -74,7 +93,7 @@ export function DashboardClient(props: {
     const today = todayJakarta();
     return {
       orderType: user.roleCode.includes("MARKETING") ? "MARKETING" : "PRODUKSI",
-      spkNo: "", customerName: "", motif: "", colorDirection: "", colorCode: "",
+      orderNo: "", orderDate: "", spkNo: "", customerName: "", motif: "", colorDirection: "", colorCode: "",
       processTypeId: "", machineId: "", fabricProblem: "", problemDescription: "",
       receivedDate: today, dueDate: defaultDueDate(today),
     };
@@ -100,6 +119,7 @@ export function DashboardClient(props: {
               onMarkSeen={() => actions.markNotificationsSeen()}
               onOpenSample={(id) => {
                 setFilters(DEFAULT_FILTERS); // pastikan baris tidak tersaring
+                setTab("queue");
                 setHighlight(id);
               }}
             />
@@ -126,8 +146,13 @@ export function DashboardClient(props: {
       <main className="mx-auto max-w-[90rem] space-y-5 px-4 py-6">
         <div className="flex flex-wrap items-end justify-between gap-3">
           <div>
-            <h1 className="text-xl font-semibold text-ink">{copy.title}</h1>
-            <p className="mt-0.5 text-sm text-ink-muted">{copy.hint}</p>
+            <h1 className="text-xl font-semibold text-ink">{tab === "results" ? "Hasil uji selesai" : copy.title}</h1>
+            <p className="mt-0.5 text-sm text-ink-muted">
+              {tab === "results"
+                ? "Sampel yang sudah di-ACC: jumlah uji/matching dengan master, ACC pada uji ke berapa, dan durasi sejak masuk lab."
+                : copy.hint}
+            </p>
+            {tab === "queue" && <p className="mt-1 text-xs text-ink-soft">CR dihitung terhadap tanggal hari ini ({fmtDate(todayJakarta())}) dan diperbarui otomatis.</p>}
           </div>
           {canEdit && (
             <button
@@ -144,15 +169,41 @@ export function DashboardClient(props: {
           )}
         </div>
 
-        <StatsStrip rows={rows} active={filters.status} onPick={(status) => setFilters((f) => ({ ...f, status }))} />
+        {showResults && (
+          <div role="tablist" aria-label="Tampilan" className="inline-flex rounded-lg bg-white p-1 shadow-card ring-1 ring-line">
+            {([
+              ["queue", "Antrean uji"],
+              ["results", `Hasil uji selesai (${rows.filter((r) => r.status === "DISETUJUI").length})`],
+            ] as const).map(([key, label]) => (
+              <button
+                key={key}
+                type="button"
+                role="tab"
+                aria-selected={tab === key}
+                onClick={() => setTab(key)}
+                className={`rounded-md px-3.5 py-1.5 text-sm font-medium transition ${tab === key ? "bg-brand-700 text-white" : "text-ink-muted hover:bg-canvas hover:text-ink"}`}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+        )}
 
-        <FilterBar value={filters} onChange={setFilters} machines={machines} />
+        {tab === "results" ? (
+          <ResultsTable rows={rows} />
+        ) : (
+          <>
+            <StatsStrip rows={rows} active={filters.status} onPick={(status) => setFilters((f) => ({ ...f, status }))} />
 
-        <p className="text-xs text-ink-soft" aria-live="polite">
-          Menampilkan {visible.length} dari {rows.length} sampel
-        </p>
+            <FilterBar value={filters} onChange={setFilters} machines={machines} />
 
-        <SampleTable rows={visible} user={user} actions={actions} highlightId={highlight} onEdit={canEdit ? (row) => setForm({ mode: "edit", row }) : undefined} />
+            <p className="text-xs text-ink-soft" aria-live="polite">
+              Menampilkan {visible.length} dari {rows.length} sampel
+            </p>
+
+            <SampleTable rows={visible} user={user} actions={actions} highlightId={highlight} onEdit={canEdit ? (row) => setForm({ mode: "edit", row }) : undefined} />
+          </>
+        )}
       </main>
 
       {form && editor && (
@@ -161,6 +212,7 @@ export function DashboardClient(props: {
           mode={form.mode}
           initial={form.mode === "edit" ? toInput(form.row) : blank()}
           processTypes={editor.processTypes}
+          processMachine={editor.processMachine}
           machines={machines}
           onSubmit={(input) => (form.mode === "edit" ? editor.update(form.row.id, input) : editor.create(input))}
           onClose={() => setForm(null)}
