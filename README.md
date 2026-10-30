@@ -13,9 +13,18 @@ lib/roles.ts              role, guard assertCan, notifikasi
 prisma/schema.prisma      skema Neon PostgreSQL
 ```
 
-Saat ini halaman utama berjalan dalam **mode demo**. Untuk memakai database, buat `lib/prisma.ts`, `lib/auth.ts`,
-dan `app/actions.ts` (lihat interface `SampleActions`), lalu ganti `DemoDashboard` dengan server component yang
-membaca data dari Prisma dan mengirimnya ke `DashboardClient`.
+Halaman utama (`/`) membaca data dari Neon dan wajib login (`/login`). Versi demo tanpa database ada di `/demo`.
+
+| Akun (password awal `lims12345`, ganti dengan `SEED_PASSWORD` saat seed) | Tampilan |
+|---|---|
+| operator.lab@lims.local | Operator |
+| kaur.lab@lims.local | Approver |
+| ppic@lims.local, marketing@lims.local | Planner |
+| kasi, kalab, kepala.ppic, kepala.marketing, admin @lims.local | Monitor |
+
+Environment variable: `DATABASE_URL` (Neon pooled), `DIRECT_URL` (Neon unpooled, untuk migrasi), `AUTH_SECRET` (acak, ≥ 32 karakter).
+
+Perubahan skema: buat migrasi baru di `prisma/migrations`, lalu jalankan `npm run db:migrate` (tidak otomatis saat build Vercel).
 
 ## Cara Menjalankan di Lokal
 
