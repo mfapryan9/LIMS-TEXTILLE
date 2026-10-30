@@ -48,11 +48,11 @@ async function main() {
       update: { name: r.name, viewMode: r.viewMode, ...flags },
       create: { code: r.code, name: r.name, viewMode: r.viewMode, ...flags },
     });
-    const email = `${r.code.toLowerCase().replaceAll("_", ".")}@lims.local`;
+    const username = r.code.toLowerCase().replaceAll("_", ".");
     const user = await prisma.user.upsert({
-      where: { email },
+      where: { username },
       update: {},
-      create: { email, name: r.name, passwordHash, roleId: role.id },
+      create: { username, name: r.name, passwordHash, roleId: role.id },
     });
     users[r.code] = user.id;
   }

@@ -15,12 +15,12 @@ prisma/schema.prisma      skema Neon PostgreSQL
 
 Halaman utama (`/`) membaca data dari Neon dan wajib login (`/login`). Versi demo tanpa database ada di `/demo`.
 
-| Akun (password awal `lims12345`, ganti dengan `SEED_PASSWORD` saat seed) | Tampilan |
+| Username (password awal `lims12345`, ganti dengan `SEED_PASSWORD` saat seed) | Tampilan |
 |---|---|
-| operator.lab@lims.local | Operator |
-| kaur.lab@lims.local | Approver |
-| ppic@lims.local, marketing@lims.local | Planner |
-| kasi, kalab, kepala.ppic, kepala.marketing, admin @lims.local | Monitor |
+| operator.lab | Operator |
+| kaur.lab | Approver |
+| ppic, marketing | Planner |
+| kasi, kalab, kepala.ppic, kepala.marketing, admin | Monitor |
 
 Environment variable: `DATABASE_URL` (Neon pooled), `DIRECT_URL` (Neon unpooled, untuk migrasi), `AUTH_SECRET` (acak, ≥ 32 karakter).
 

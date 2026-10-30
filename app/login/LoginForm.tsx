@@ -6,7 +6,7 @@ import { login } from "./actions";
 const field = "w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-indigo-600";
 
 export function LoginForm() {
-  const [email, setEmail] = useState("");
+  const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [pending, start] = useTransition();
@@ -18,14 +18,14 @@ export function LoginForm() {
         e.preventDefault();
         setError(null);
         start(async () => {
-          const res = await login(email, password); // berhasil → redirect di server
+          const res = await login(username, password); // berhasil → redirect di server
           if (res?.error) setError(res.error);
         });
       }}
     >
       <label className="block text-sm">
-        <span className="mb-1 block font-medium text-slate-700">Email</span>
-        <input type="email" required autoComplete="username" value={email} onChange={(e) => setEmail(e.target.value)} className={field} />
+        <span className="mb-1 block font-medium text-slate-700">Username</span>
+        <input type="text" required autoComplete="username" autoCapitalize="none" spellCheck={false} value={username} onChange={(e) => setUsername(e.target.value)} className={field} />
       </label>
       <label className="block text-sm">
         <span className="mb-1 block font-medium text-slate-700">Password</span>
