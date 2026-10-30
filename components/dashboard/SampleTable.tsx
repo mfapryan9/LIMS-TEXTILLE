@@ -135,7 +135,7 @@ export function SampleTable({ rows, user, actions, highlightId, onEdit }: { rows
           <tr>
             <th scope="col" className="w-10 px-3 py-2">#</th>
             <th scope="col" className="px-3 py-2">SPK / Order</th>
-            <th scope="col" className="px-3 py-2">Proses · Mesin</th>
+            <th scope="col" className="px-3 py-2">Kelompok mesin · Proses</th>
             <th scope="col" className="px-3 py-2">Due date</th>
             <th scope="col" className="px-3 py-2">Prioritas</th>
             <th scope="col" className="px-3 py-2">Status &amp; riwayat uji</th>
@@ -156,8 +156,9 @@ export function SampleTable({ rows, user, actions, highlightId, onEdit }: { rows
                 <p className="text-xs text-ink-soft">{r.orderType === "PRODUKSI" ? "Produksi" : "Marketing"}{r.fabricProblem ? ` · Problem: ${r.fabricProblem}` : ""}</p>
               </td>
               <td className="px-3 py-2.5">
-                <p>{r.processName}</p>
-                <p className="text-xs text-ink-muted">{r.machineName}{r.standardDays ? ` · p = ${+r.standardDays.toFixed(2)} hr` : ""}</p>
+                <p className="font-medium text-ink">{r.machineName}</p>
+                <p className="text-xs text-ink-muted">{r.processName}</p>
+                <p className="text-xs text-ink-soft">{r.standardDays ? `p = ${+r.standardDays.toFixed(2)} hr` : "p belum diatur"}</p>
               </td>
               <td className="whitespace-nowrap px-3 py-2.5">
                 <p>{fmtDate(r.dueDate)}</p>

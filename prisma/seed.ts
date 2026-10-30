@@ -28,7 +28,8 @@ const wib = (isoDate: string, hour: number) => new Date(Date.parse(`${isoDate}T0
 /** Hari ini (WIB) + n hari → YYYY-MM-DD */
 const day = (offset: number) => new Date(Date.parse(todayJakarta() + "T00:00:00Z") + offset * MS_PER_DAY).toISOString().slice(0, 10);
 
-const machineName = (sheet: string) => sheet.replace(/^[A-Z]\.\s*/, "");
+/** Nama kelompok mesin = nama sheet Excel ("A. Thermosol"), sehingga urutan & penamaan sama dengan file Excel. */
+const machineName = (sheet: string) => sheet;
 const processCode = (name: string) => name.toUpperCase().replace(/[^A-Z0-9]+/g, "_").replace(/^_|_$/g, "");
 
 async function main() {

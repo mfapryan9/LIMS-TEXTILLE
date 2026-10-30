@@ -168,15 +168,7 @@ export function applyFilters(rows: SampleRow[], f: Filters): SampleRow[] {
 
 const field = "rounded-lg border border-line bg-white px-3 py-2 text-sm text-ink placeholder:text-ink-soft focus-visible:border-brand-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-200";
 
-export function FilterBar({
-  value,
-  onChange,
-  machines,
-}: {
-  value: Filters;
-  onChange: (f: Filters) => void;
-  machines: { id: string; name: string }[];
-}) {
+export function FilterBar({ value, onChange }: { value: Filters; onChange: (f: Filters) => void }) {
   const set = <K extends keyof Filters>(k: K, v: Filters[K]) => onChange({ ...value, [k]: v });
   return (
     <div role="search" className="flex flex-wrap items-center gap-2">
@@ -199,17 +191,60 @@ export function FilterBar({
         <option value="PRODUKSI">Produksi</option>
         <option value="MARKETING">Marketing</option>
       </select>
-      <select aria-label="Mesin" value={value.machineId} onChange={(e) => set("machineId", e.target.value)} className={field}>
-        <option value="ALL">Semua mesin</option>
-        {machines.map((m) => (
-          <option key={m.id} value={m.id}>
-            {m.name}
-          </option>
-        ))}
-      </select>
+      {/* Kelompok mesin dipilih lewat tab sheet di atas; reset tetap mengembalikan ke "Semua kelompok" */}
       <button type="button" onClick={() => onChange(DEFAULT_FILTERS)} className="rounded-lg px-3 py-2 text-sm font-medium text-brand-700 hover:bg-brand-50">
         Reset filter
       </button>
+    </div>
+  );
+}
+
+/* ───────── Kelompok mesin = sheet Excel (A. Thermosol, B. CPB, …) ───────── */
+
+export interface MachineGroup {
+  id: string;
+  name: string; // nama sheet, mis. "A. Thermosol"
+  p: number | null; // processing time kelompok (hari)
+  processes: string[]; // proses lab dalam kelompok ini
+}
+
+/** Tab per kelompok mesin seperti sheet di Excel. Angka = sampel aktif (belum ACC) di kelompok itu. */
+export function MachineGroupTabs({
+  groups,
+  rows,
+  value,
+  onChange,
+}: {
+  groups: MachineGroup[];
+  rows: SampleRow[];
+  value: string; // "ALL" atau id mesin
+  onChange: (id: string) => void;
+}) {
+  const active = (id?: string) => rows.filter((r) => r.status !== "DISETUJUI" && (!id || r.machineId === id)).length;
+  const urgent = (id?: string) => rows.filter((r) => r.isUrgent && r.status !== "DISETUJUI" && (!id || r.machineId === id)).length;
+  const tab = (selected: boolean) =>
+    `flex min-w-[9.5rem] flex-col items-start rounded-lg px-3 py-2 text-left ring-1 transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand-600 ${
+      selected ? "bg-brand-700 text-white ring-brand-700" : "bg-white text-ink ring-line hover:ring-brand-300"
+    }`;
+
+  return (
+    <div role="tablist" aria-label="Kelompok mesin" className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1">
+      <button type="button" role="tab" aria-selected={value === "ALL"} onClick={() => onChange("ALL")} className={tab(value === "ALL")}>
+        <span className="text-sm font-semibold">Semua kelompok</span>
+        <span className={`text-xs ${value === "ALL" ? "text-brand-100" : "text-ink-soft"}`}>{active()} aktif{urgent() > 0 && ` · ${urgent()} urgent`}</span>
+      </button>
+      {groups.map((g) => {
+        const sel = value === g.id;
+        return (
+          <button key={g.id} type="button" role="tab" aria-selected={sel} onClick={() => onChange(g.id)} className={tab(sel)} title={g.processes.join(", ")}>
+            <span className="whitespace-nowrap text-sm font-semibold">{g.name}</span>
+            <span className={`whitespace-nowrap text-xs ${sel ? "text-brand-100" : "text-ink-soft"}`}>
+              {active(g.id)} aktif{urgent(g.id) > 0 && ` · ${urgent(g.id)} urgent`}
+              {g.p !== null && ` · p ${+g.p.toFixed(2)} hr`}
+            </span>
+          </button>
+        );
+      })}
     </div>
   );
 }

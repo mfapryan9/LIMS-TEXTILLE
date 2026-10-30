@@ -8,7 +8,7 @@ import { VIEW_DEFAULT_STATUSES } from "@/lib/roles";
 import { defaultDueDate, todayJakarta, type SampleStatusKey } from "@/lib/cr";
 import type { SampleFormResult, SampleInput } from "@/lib/sample-input";
 import type { SampleRow } from "./badges";
-import { applyFilters, DEFAULT_FILTERS, FilterBar, NotificationBell, StatsStrip, type Filters } from "./header-parts";
+import { applyFilters, DEFAULT_FILTERS, FilterBar, MachineGroupTabs, NotificationBell, StatsStrip, type Filters, type MachineGroup } from "./header-parts";
 import { ResultsTable } from "./ResultsTable";
 import { SampleForm } from "./SampleForm";
 import { fmtDate, SampleTable, type SampleActions } from "./SampleTable";
@@ -41,7 +41,7 @@ export function DashboardClient(props: {
   user: SessionUser;
   rows: SampleRow[]; // sudah di-enrich CR & diurutkan di server (sortByPriority)
   notifs: Notif[];
-  machines: Option[];
+  machines: MachineGroup[]; // kelompok mesin = sheet Excel, urut A–E
   actions: SampleActions & { markNotificationsSeen: () => Promise<void> };
   editor?: SampleEditor; // tambah / edit SPK (hanya untuk role yang berhak)
   onLogout?: () => Promise<void>;
@@ -73,6 +73,9 @@ export function DashboardClient(props: {
   });
   const [highlight, setHighlight] = useState<string | null>(null);
   const [form, setForm] = useState<null | { mode: "create" } | { mode: "edit"; row: SampleRow }>(null);
+
+  // Kelompok mesin (sheet) yang dipilih: ringkasan status & tabel hanya untuk kelompok itu
+  const groupRows = useMemo(() => (filters.machineId === "ALL" ? rows : rows.filter((r) => r.machineId === filters.machineId)), [rows, filters.machineId]);
 
   // Operator: sembunyikan sampel DISETUJUI dari antrean kecuali dipilih eksplisit
   const scoped = useMemo(() => {
@@ -190,15 +193,18 @@ export function DashboardClient(props: {
         )}
 
         {tab === "results" ? (
-          <ResultsTable rows={rows} />
+          <ResultsTable rows={rows} groups={machines} />
         ) : (
           <>
-            <StatsStrip rows={rows} active={filters.status} onPick={(status) => setFilters((f) => ({ ...f, status }))} />
+            <MachineGroupTabs groups={machines} rows={rows} value={filters.machineId} onChange={(machineId) => setFilters((f) => ({ ...f, machineId }))} />
 
-            <FilterBar value={filters} onChange={setFilters} machines={machines} />
+            <StatsStrip rows={groupRows} active={filters.status} onPick={(status) => setFilters((f) => ({ ...f, status }))} />
+
+            <FilterBar value={filters} onChange={setFilters} />
 
             <p className="text-xs text-ink-soft" aria-live="polite">
-              Menampilkan {visible.length} dari {rows.length} sampel
+              Menampilkan {visible.length} dari {groupRows.length} sampel
+              {filters.machineId !== "ALL" && ` di ${machines.find((m) => m.id === filters.machineId)?.name ?? "kelompok ini"}`}
             </p>
 
             <SampleTable rows={visible} user={user} actions={actions} highlightId={highlight} onEdit={canEdit ? (row) => setForm({ mode: "edit", row }) : undefined} />

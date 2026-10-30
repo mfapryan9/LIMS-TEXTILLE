@@ -83,7 +83,16 @@ export default async function DashboardPage() {
       user={user}
       rows={rows}
       notifs={notifs}
-      machines={machines.map((m) => ({ id: m.id, name: m.name }))}
+      machines={machines.map((m) => {
+        // Kelompok mesin = sheet Excel; p sama untuk semua proses di kelompoknya
+        const own = times.filter((t) => t.machineId === m.id);
+        return {
+          id: m.id,
+          name: m.name,
+          p: own.length ? own[0].standardDays.toNumber() : null,
+          processes: processTypes.filter((p) => own.some((t) => t.processTypeId === p.id)).map((p) => p.name),
+        };
+      })}
       actions={{ startTrial, finishTrial, approve, reject, changeDueDate, setUrgent, markNotificationsSeen }}
       editor={{
         processTypes: processTypes.map((p) => ({ id: p.id, name: p.name })),

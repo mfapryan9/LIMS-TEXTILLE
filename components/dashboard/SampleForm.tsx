@@ -144,8 +144,9 @@ export function SampleForm(props: {
     setValues((prev) => {
       const next = { ...prev, [k]: v };
       if (k === "receivedDate" && !dueTouched && typeof v === "string" && v) next.dueDate = defaultDueDate(v);
-      // Proses menentukan kelompok mesin (sheet Excel): isi mesin otomatis, tetap bisa diganti
+      // Kelompok mesin (sheet Excel) ↔ proses: proses selalu milik kelompok yang dipilih
       if (k === "processTypeId" && typeof v === "string" && processMachine[v]) next.machineId = processMachine[v];
+      if (k === "machineId" && prev.processTypeId && processMachine[prev.processTypeId] !== v) next.processTypeId = "";
       return next;
     });
     if (k === "dueDate") setDueTouched(true);
@@ -272,16 +273,23 @@ export function SampleForm(props: {
               <Field fromPhoto={found.has("motif" as SpkField)} label="Motif (opsional)">{text("motif")}</Field>
               <Field fromPhoto={found.has("colorCode" as SpkField)} label="Kode warna (opsional)">{text("colorCode", "CM-102")}</Field>
               <Field fromPhoto={found.has("colorDirection" as SpkField)} label="Arah warna (opsional)">{text("colorDirection", "mis. lebih biru")}</Field>
-              <Field fromPhoto={found.has("processTypeId" as SpkField)} label="Proses lab">
-                <select value={values.processTypeId} onChange={(e) => set("processTypeId", e.target.value)} className={ring("processTypeId")}>
-                  <option value="">Pilih proses</option>
-                  {processTypes.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
+              <Field fromPhoto={found.has("machineId" as SpkField)} label="Kelompok mesin (sheet)">
+                <select value={values.machineId} onChange={(e) => set("machineId", e.target.value)} className={ring("machineId")}>
+                  <option value="">Pilih kelompok mesin</option>
+                  {machines.map((m) => <option key={m.id} value={m.id}>{m.name}</option>)}
                 </select>
               </Field>
-              <Field fromPhoto={found.has("machineId" as SpkField)} label="Mesin">
-                <select value={values.machineId} onChange={(e) => set("machineId", e.target.value)} className={ring("machineId")}>
-                  <option value="">Pilih mesin</option>
-                  {machines.map((m) => <option key={m.id} value={m.id}>{m.name}</option>)}
+              <Field fromPhoto={found.has("processTypeId" as SpkField)} label="Proses lab">
+                <select value={values.processTypeId} onChange={(e) => set("processTypeId", e.target.value)} className={ring("processTypeId")}>
+                  <option value="">{values.machineId ? "Pilih proses" : "Pilih proses (kelompok terisi otomatis)"}</option>
+                  {/* Tanpa kelompok: semua proses dikelompokkan per sheet; dengan kelompok: hanya proses milik kelompok itu */}
+                  {machines
+                    .filter((m) => !values.machineId || m.id === values.machineId)
+                    .map((m) => (
+                      <optgroup key={m.id} label={m.name}>
+                        {processTypes.filter((p) => processMachine[p.id] === m.id).map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
+                      </optgroup>
+                    ))}
                 </select>
               </Field>
               <Field fromPhoto={found.has("receivedDate" as SpkField)} label="Tanggal terima">

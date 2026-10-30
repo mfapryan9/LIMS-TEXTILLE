@@ -2,18 +2,21 @@
 
 import { useMemo, useState } from "react";
 import { fmtDays, type SampleRow } from "./badges";
+import type { MachineGroup } from "./header-parts";
 import { fmtDate } from "./SampleTable";
 
 /** Hasil uji yang sudah di-ACC: jumlah uji, ACC di uji ke berapa, durasi dari masuk lab, CR saat order (sama dengan Excel). */
-export function ResultsTable({ rows }: { rows: SampleRow[] }) {
+export function ResultsTable({ rows, groups }: { rows: SampleRow[]; groups: MachineGroup[] }) {
   const [q, setQ] = useState("");
+  const [group, setGroup] = useState("ALL");
 
+  const allDone = useMemo(() => rows.filter((r) => r.status === "DISETUJUI"), [rows]);
   const done = useMemo(
     () =>
-      rows
-        .filter((r) => r.status === "DISETUJUI")
+      allDone
+        .filter((r) => group === "ALL" || r.machineId === group)
         .sort((a, b) => (b.approvedAt ?? "").localeCompare(a.approvedAt ?? "")),
-    [rows],
+    [allDone, group],
   );
   const visible = useMemo(() => {
     const s = q.trim().toLowerCase();
@@ -29,6 +32,8 @@ export function ResultsTable({ rows }: { rows: SampleRow[] }) {
 
   return (
     <section className="space-y-4" aria-label="Hasil uji selesai">
+      <GroupSummary groups={groups} done={allDone} value={group} onChange={setGroup} />
+
       <div className="grid grid-cols-2 gap-2 lg:grid-cols-4">
         <Stat label="Sampel selesai (ACC)" value={String(n)} />
         <Stat label="Rata-rata durasi di lab" value={`${avg((r) => r.labDays).toFixed(1)} hari`} />
@@ -54,7 +59,7 @@ export function ResultsTable({ rows }: { rows: SampleRow[] }) {
             <thead className="border-b border-line bg-canvas/70 text-left text-xs font-medium uppercase tracking-wide text-ink-muted">
               <tr>
                 <th scope="col" className="px-3 py-2">SPK / Order</th>
-                <th scope="col" className="px-3 py-2">Proses · Mesin</th>
+                <th scope="col" className="px-3 py-2">Kelompok mesin · Proses</th>
                 <th scope="col" className="px-3 py-2">Masuk lab → ACC</th>
                 <th scope="col" className="px-3 py-2 text-right">Durasi</th>
                 <th scope="col" className="px-3 py-2 text-right">Jumlah uji</th>
@@ -71,8 +76,8 @@ export function ResultsTable({ rows }: { rows: SampleRow[] }) {
                     {r.colorCode && <p className="text-xs text-ink-muted">Warna {r.colorCode}</p>}
                   </td>
                   <td className="px-3 py-2.5">
-                    <p>{r.processName}</p>
-                    <p className="text-xs text-ink-muted">{r.machineName}</p>
+                    <p className="font-medium text-ink">{r.machineName}</p>
+                    <p className="text-xs text-ink-muted">{r.processName}</p>
                   </td>
                   <td className="whitespace-nowrap px-3 py-2.5">
                     <p>{fmtDate(r.receivedDate)}</p>
@@ -98,6 +103,45 @@ export function ResultsTable({ rows }: { rows: SampleRow[] }) {
         </div>
       )}
     </section>
+  );
+}
+
+/** Ringkasan per kelompok mesin (sheet): p dari Excel vs rata-rata durasi aktual. Klik untuk menyaring tabel. */
+function GroupSummary({ groups, done, value, onChange }: { groups: MachineGroup[]; done: SampleRow[]; value: string; onChange: (id: string) => void }) {
+  return (
+    <div className="overflow-x-auto rounded-xl bg-white shadow-card ring-1 ring-line">
+      <table className="w-full min-w-[40rem] text-sm">
+        <caption className="sr-only">Ringkasan hasil uji per kelompok mesin</caption>
+        <thead className="border-b border-line bg-canvas/70 text-left text-xs font-medium uppercase tracking-wide text-ink-muted">
+          <tr>
+            <th scope="col" className="px-3 py-2">Kelompok mesin (sheet)</th>
+            <th scope="col" className="px-3 py-2 text-right">Selesai</th>
+            <th scope="col" className="px-3 py-2 text-right" title="Processing time dari Excel, dipakai untuk CR">p (Excel)</th>
+            <th scope="col" className="px-3 py-2 text-right">Rata-rata di lab</th>
+            <th scope="col" className="px-3 py-2 text-right">Rata-rata jumlah uji</th>
+          </tr>
+        </thead>
+        <tbody className="divide-y divide-line">
+          {[{ id: "ALL", name: "Semua kelompok", p: null, processes: [] } as MachineGroup, ...groups].map((g) => {
+            const list = g.id === "ALL" ? done : done.filter((r) => r.machineId === g.id);
+            const avg = (f: (r: SampleRow) => number) => (list.length ? (list.reduce((a, r) => a + f(r), 0) / list.length).toFixed(1) : "–");
+            const sel = value === g.id;
+            return (
+              <tr key={g.id} onClick={() => onChange(g.id)} className={`cursor-pointer ${sel ? "bg-brand-50" : "hover:bg-canvas/50"}`}>
+                <td className="px-3 py-2">
+                  <button type="button" aria-pressed={sel} className={`text-left font-medium ${sel ? "text-brand-800" : "text-ink"}`}>{g.name}</button>
+                  {g.processes.length > 0 && <p className="text-xs text-ink-soft">{g.processes.join(", ")}</p>}
+                </td>
+                <td className="px-3 py-2 text-right tabular-nums">{list.length}</td>
+                <td className="px-3 py-2 text-right tabular-nums">{g.p === null ? "–" : `${+g.p.toFixed(2)} hr`}</td>
+                <td className="px-3 py-2 text-right tabular-nums">{avg((r) => r.labDays)} hr</td>
+                <td className="px-3 py-2 text-right tabular-nums">{avg((r) => r.approvedTrialNo ?? 0)}×</td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
+    </div>
   );
 }
 
