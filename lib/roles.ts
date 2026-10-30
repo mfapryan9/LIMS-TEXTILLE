@@ -36,10 +36,12 @@ export const VIEW_DEFAULT_STATUSES: Record<ViewMode, string[] | "ALL"> = {
 };
 
 /** SERVER-SIDE guard: panggil di setiap server action / route handler. UI hanya menyembunyikan tombol. */
-export function assertCan(user: SessionUser, action: "approve" | "editDue" | "markUrgent" | "runTrial" | "manageMaster") {
+export function assertCan(user: SessionUser, action: "approve" | "editDue" | "markUrgent" | "runTrial" | "manageMaster" | "editSample") {
   const ok =
     (action === "approve" && user.canApprove) ||
     (action === "editDue" && user.canEditDue) ||
+    (action === "editSample" && user.canEditDue) || // PPIC & Marketing menginput / mengoreksi data SPK
+
     (action === "markUrgent" && user.canMarkUrgent) ||
     (action === "manageMaster" && user.canManageMaster) ||
     (action === "runTrial" && user.viewMode === "OPERATOR");

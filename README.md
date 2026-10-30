@@ -22,6 +22,11 @@ Halaman utama (`/`) membaca data dari Neon dan wajib login (`/login`). Versi dem
 | ppic, marketing | Planner |
 | kasi, kalab, kepala.ppic, kepala.marketing, admin | Monitor |
 
+**Tambah / edit SPK** (PPIC & Marketing): tombol *Tambah SPK* membuka form dengan kamera atau unggah foto SPK cetak.
+Foto dibaca di browser dengan Tesseract.js (`ind+eng`, data bahasa diunduh dari CDN saat pertama kali), lalu
+`lib/spk-parse.ts` memetakan teks ke kolom form. Kolom hasil foto ditandai "dari foto" dan semuanya bisa diedit sebelum disimpan.
+Format label yang dikenali: `No. SPK`, `Customer`, `Motif`, `Kode Warna`, `Arah Warna`, `Proses`, `Mesin`, `Tgl Terima`, `Due Date`.
+
 Environment variable: `DATABASE_URL` (Neon pooled), `DIRECT_URL` (Neon unpooled, untuk migrasi), `AUTH_SECRET` (acak, ≥ 32 karakter).
 
 Perubahan skema: buat migrasi baru di `prisma/migrations`, lalu jalankan `npm run db:migrate` (tidak otomatis saat build Vercel).

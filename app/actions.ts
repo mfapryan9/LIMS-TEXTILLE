@@ -1,10 +1,11 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import type { Prisma } from "@prisma/client";
+import { Prisma } from "@prisma/client";
 import { getSessionUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { assertCan } from "@/lib/roles";
+import { validateSampleInput, type SampleFormResult, type SampleInput } from "@/lib/sample-input";
 
 /**
  * Server Actions untuk dashboard (interface SampleActions).
@@ -125,6 +126,77 @@ export async function setUrgent(sampleId: string, urgent: boolean, reason: strin
       { isUrgent: s.isUrgent }, { isUrgent: urgent, reason: reason.trim() });
   });
   revalidatePath("/");
+}
+
+// ───────────── Tambah / edit SPK ─────────────
+// Mengembalikan { ok, error } alih-alih throw: di production pesan error dari throw disembunyikan Next.js,
+// padahal form perlu menampilkan alasan gagal (mis. SPK + kode warna sudah terdaftar).
+
+const toDate = (iso: string) => new Date(`${iso}T00:00:00Z`);
+
+function sampleData(d: SampleInput) {
+  return {
+    orderType: d.orderType,
+    spkNo: d.spkNo,
+    customerName: d.customerName,
+    motif: d.motif,
+    colorDirection: d.colorDirection,
+    colorCode: d.colorCode,
+    processTypeId: d.processTypeId,
+    machineId: d.machineId,
+    fabricProblem: d.fabricProblem || null,
+    problemDescription: d.problemDescription || null,
+    receivedDate: toDate(d.receivedDate),
+    dueDate: toDate(d.dueDate),
+  };
+}
+
+function writeError(e: unknown): SampleFormResult {
+  if (e instanceof Prisma.PrismaClientKnownRequestError) {
+    if (e.code === "P2002") return { ok: false, error: "Kombinasi No. SPK + kode warna ini sudah terdaftar" };
+    if (e.code === "P2003") return { ok: false, error: "Proses atau mesin tidak ditemukan di master data" };
+  }
+  console.error(e);
+  return { ok: false, error: "Gagal menyimpan data, coba lagi" };
+}
+
+export async function createSample(input: SampleInput): Promise<SampleFormResult> {
+  const user = await getSessionUser();
+  assertCan(user, "editSample");
+  const v = validateSampleInput(input);
+  if ("error" in v) return { ok: false, error: v.error };
+
+  try {
+    await prisma.$transaction(async (tx) => {
+      const s = await tx.sample.create({ data: { ...sampleData(v.data), createdById: user.id } });
+      await audit(tx, user.id, s.id, "SAMPLE_CREATED", "Sample", s.id, undefined, v.data);
+    });
+  } catch (e) {
+    return writeError(e);
+  }
+  revalidatePath("/");
+  return { ok: true };
+}
+
+export async function updateSample(sampleId: string, input: SampleInput): Promise<SampleFormResult> {
+  const user = await getSessionUser();
+  assertCan(user, "editSample");
+  const v = validateSampleInput(input);
+  if ("error" in v) return { ok: false, error: v.error };
+
+  try {
+    await prisma.$transaction(async (tx) => {
+      const before = await tx.sample.findUnique({ where: { id: sampleId } });
+      if (!before) throw new Error("NOT_FOUND");
+      await tx.sample.update({ where: { id: sampleId }, data: sampleData(v.data) });
+      await audit(tx, user.id, sampleId, "SAMPLE_UPDATED", "Sample", sampleId, JSON.parse(JSON.stringify(before)), v.data);
+    });
+  } catch (e) {
+    if (e instanceof Error && e.message === "NOT_FOUND") return { ok: false, error: "Sampel tidak ditemukan" };
+    return writeError(e);
+  }
+  revalidatePath("/");
+  return { ok: true };
 }
 
 export async function markNotificationsSeen() {

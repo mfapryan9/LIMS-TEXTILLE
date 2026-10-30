@@ -14,10 +14,10 @@ const NOTIF_LABEL: Record<NotifType, string> = {
   NEW: "Baru masuk",
 };
 const NOTIF_DOT: Record<NotifType, string> = {
-  LATE: "bg-red-500",
-  URGENT: "bg-fuchsia-500",
+  LATE: "bg-rose-400",
+  URGENT: "bg-fuchsia-400",
   NEAR_DEADLINE: "bg-amber-400",
-  NEW: "bg-sky-400",
+  NEW: "bg-brand-400",
 };
 
 export function NotificationBell({
@@ -39,24 +39,24 @@ export function NotificationBell({
         aria-haspopup="dialog"
         aria-expanded={open}
         onClick={() => setOpen((o) => !o)}
-        className="relative rounded-md px-3 py-1.5 text-sm text-indigo-50 hover:bg-white/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-white"
+        className="relative rounded-lg px-3 py-1.5 text-sm text-ink-muted hover:bg-canvas hover:text-ink focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand-600"
       >
         Notifikasi
         {unread > 0 && (
-          <span className="ml-2 rounded-full bg-red-500 px-1.5 py-0.5 text-xs font-semibold text-white tabular-nums">{unread}</span>
+          <span className="ml-2 rounded-full bg-rose-100 px-1.5 py-0.5 text-xs font-semibold text-rose-700 tabular-nums">{unread}</span>
         )}
       </button>
 
       {open && (
-        <div role="dialog" aria-label="Notifikasi" className="absolute right-0 z-30 mt-2 w-[22rem] max-w-[92vw] rounded-lg bg-white text-slate-900 shadow-xl ring-1 ring-slate-200">
-          <div className="flex items-center justify-between border-b px-4 py-2.5">
+        <div role="dialog" aria-label="Notifikasi" className="absolute right-0 z-30 mt-2 w-[22rem] max-w-[92vw] rounded-xl bg-white text-ink shadow-xl ring-1 ring-line">
+          <div className="flex items-center justify-between border-b border-line px-4 py-2.5">
             <p className="text-sm font-semibold">{notifs.length} pemberitahuan</p>
-            <button type="button" onClick={onMarkSeen} className="text-xs text-indigo-700 hover:underline">
+            <button type="button" onClick={onMarkSeen} className="text-xs font-medium text-brand-700 hover:underline">
               Tandai sudah dibaca
             </button>
           </div>
-          <ul className="max-h-96 divide-y overflow-auto">
-            {notifs.length === 0 && <li className="px-4 py-6 text-sm text-slate-500">Tidak ada yang perlu perhatian saat ini.</li>}
+          <ul className="max-h-96 divide-y divide-line overflow-auto">
+            {notifs.length === 0 && <li className="px-4 py-6 text-sm text-ink-soft">Tidak ada yang perlu perhatian saat ini.</li>}
             {notifs.map((n) => (
               <li key={n.key}>
                 <button
@@ -65,14 +65,14 @@ export function NotificationBell({
                     onOpenSample(n.sampleId);
                     setOpen(false);
                   }}
-                  className="flex w-full gap-3 px-4 py-2.5 text-left hover:bg-slate-50"
+                  className="flex w-full gap-3 px-4 py-2.5 text-left hover:bg-canvas"
                 >
                   <span className={`mt-1.5 h-2 w-2 shrink-0 rounded-full ${NOTIF_DOT[n.type]}`} aria-hidden />
                   <span className="min-w-0">
                     <span className="block text-sm font-medium">
                       {n.title} {n.unread && <span className="sr-only">(belum dibaca)</span>}
                     </span>
-                    <span className="block truncate text-xs text-slate-500">
+                    <span className="block truncate text-xs text-ink-soft">
                       {NOTIF_LABEL[n.type]} · {n.detail}
                     </span>
                   </span>
@@ -90,11 +90,11 @@ export function NotificationBell({
 
 const STAT_ORDER: SampleStatusKey[] = ["MENUNGGU", "DALAM_PROSES", "MENUNGGU_APPROVAL", "DISETUJUI", "MATCHING_ULANG"];
 const STAT_BAR: Record<SampleStatusKey, string> = {
-  MENUNGGU: "bg-slate-400",
-  DALAM_PROSES: "bg-sky-500",
-  MENUNGGU_APPROVAL: "bg-violet-500",
-  DISETUJUI: "bg-emerald-500",
-  MATCHING_ULANG: "bg-orange-500",
+  MENUNGGU: "bg-slate-300",
+  DALAM_PROSES: "bg-sky-400",
+  MENUNGGU_APPROVAL: "bg-violet-400",
+  DISETUJUI: "bg-emerald-400",
+  MATCHING_ULANG: "bg-orange-400",
 };
 
 export function StatsStrip({
@@ -109,7 +109,7 @@ export function StatsStrip({
   const count = (s: SampleStatusKey) => rows.filter((r) => r.status === s).length;
   return (
     <section aria-label="Ringkasan status" className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-6">
-      <StatCell label="Semua sampel" value={rows.length} bar="bg-indigo-900" selected={active === "ALL"} onClick={() => onPick("ALL")} />
+      <StatCell label="Semua sampel" value={rows.length} bar="bg-brand-600" selected={active === "ALL"} onClick={() => onPick("ALL")} />
       {STAT_ORDER.map((s) => (
         <StatCell
           key={s}
@@ -130,12 +130,12 @@ function StatCell({ label, value, bar, selected, onClick }: { label: string; val
       type="button"
       onClick={onClick}
       aria-pressed={selected}
-      className={`overflow-hidden rounded-lg bg-white text-left ring-1 transition ${selected ? "ring-2 ring-indigo-700" : "ring-slate-200 hover:ring-slate-400"}`}
+      className={`overflow-hidden rounded-xl bg-white text-left shadow-card ring-1 transition ${selected ? "ring-2 ring-brand-500" : "ring-line hover:ring-brand-200"}`}
     >
       <span className={`block h-1 ${bar}`} />
       <span className="block px-3 py-2">
-        <span className="block text-2xl font-semibold tabular-nums">{value}</span>
-        <span className="block text-xs text-slate-600">{label}</span>
+        <span className="block text-2xl font-semibold tabular-nums text-ink">{value}</span>
+        <span className="block text-xs text-ink-muted">{label}</span>
       </span>
     </button>
   );
@@ -166,7 +166,7 @@ export function applyFilters(rows: SampleRow[], f: Filters): SampleRow[] {
   });
 }
 
-const field = "rounded-md border border-slate-300 bg-white px-2.5 py-1.5 text-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-indigo-600";
+const field = "rounded-lg border border-line bg-white px-3 py-2 text-sm text-ink placeholder:text-ink-soft focus-visible:border-brand-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-200";
 
 export function FilterBar({
   value,
@@ -207,7 +207,7 @@ export function FilterBar({
           </option>
         ))}
       </select>
-      <button type="button" onClick={() => onChange(DEFAULT_FILTERS)} className="rounded-md px-2.5 py-1.5 text-sm text-indigo-800 hover:bg-indigo-50">
+      <button type="button" onClick={() => onChange(DEFAULT_FILTERS)} className="rounded-lg px-3 py-2 text-sm font-medium text-brand-700 hover:bg-brand-50">
         Reset filter
       </button>
     </div>

@@ -13,6 +13,7 @@ export type SampleRow = {
   machineName: string;
   processTypeId: string;
   fabricProblem: string | null;
+  problemDescription: string | null;
   receivedDate: string; // YYYY-MM-DD
   dueDate: string; // YYYY-MM-DD
   status: SampleStatusKey;
@@ -35,11 +36,11 @@ export const STATUS_LABEL: Record<SampleStatusKey, string> = {
 };
 
 const STATUS_STYLE: Record<SampleStatusKey, string> = {
-  MENUNGGU: "bg-slate-100 text-slate-700 ring-slate-300",
-  DALAM_PROSES: "bg-sky-50 text-sky-800 ring-sky-300",
-  MENUNGGU_APPROVAL: "bg-violet-50 text-violet-800 ring-violet-300",
-  DISETUJUI: "bg-emerald-50 text-emerald-800 ring-emerald-300",
-  MATCHING_ULANG: "bg-orange-50 text-orange-800 ring-orange-300",
+  MENUNGGU: "bg-slate-50 text-slate-700 ring-slate-200",
+  DALAM_PROSES: "bg-sky-50 text-sky-800 ring-sky-200",
+  MENUNGGU_APPROVAL: "bg-violet-50 text-violet-800 ring-violet-200",
+  DISETUJUI: "bg-emerald-50 text-emerald-800 ring-emerald-200",
+  MATCHING_ULANG: "bg-orange-50 text-orange-800 ring-orange-200",
 };
 
 const pill = "inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium ring-1 ring-inset whitespace-nowrap";
@@ -48,22 +49,22 @@ export function StatusBadge({ status }: { status: SampleStatusKey }) {
   return <span className={`${pill} ${STATUS_STYLE[status]}`}>{STATUS_LABEL[status]}</span>;
 }
 
-/** Badge CR: merah (CR<0), kuning (0≤CR≤1), netral. Selalu ada teks, tidak hanya warna. */
+/** Badge CR: merah lembut (CR<0), kuning lembut (0≤CR≤1), hijau lembut. Selalu ada teks, tidak hanya warna. */
 export function CrBadge({ cr, urgency, daysLeft }: Pick<SampleRow, "cr" | "urgency" | "daysLeft">) {
   if (urgency === "NONE" && cr === null) {
-    return <span className={`${pill} bg-slate-50 text-slate-500 ring-slate-200`} title="Waktu proses standar belum diatur di master data">p belum diatur</span>;
+    return <span className={`${pill} bg-canvas text-ink-soft ring-line`} title="Waktu proses standar belum diatur di master data">p belum diatur</span>;
   }
   const label = urgency === "LATE" ? "Terlambat" : urgency === "WARNING" ? "Mendesak" : "Aman";
   const style =
     urgency === "LATE"
-      ? "bg-red-600 text-white ring-red-700"
+      ? "bg-rose-100 text-rose-800 ring-rose-300 font-semibold"
       : urgency === "WARNING"
-        ? "bg-amber-300 text-amber-950 ring-amber-500"
-        : "bg-white text-slate-600 ring-slate-300";
+        ? "bg-amber-100 text-amber-900 ring-amber-300"
+        : "bg-emerald-50 text-emerald-800 ring-emerald-200";
   return (
     <span className="inline-flex flex-col items-start leading-tight">
       <span className={`${pill} ${style}`}>{label}</span>
-      <span className="mt-0.5 text-[11px] tabular-nums text-slate-500">
+      <span className="mt-0.5 text-[11px] tabular-nums text-ink-soft">
         CR {cr === null ? "–" : cr.toFixed(2)} · {daysLeft < 0 ? `lewat ${-daysLeft} hr` : `sisa ${daysLeft} hr`}
       </span>
     </span>
@@ -71,9 +72,9 @@ export function CrBadge({ cr, urgency, daysLeft }: Pick<SampleRow, "cr" | "urgen
 }
 
 export function UrgentBadge() {
-  return <span className={`${pill} bg-fuchsia-700 text-white ring-fuchsia-900 font-bold`}>URGENT</span>;
+  return <span className={`${pill} bg-fuchsia-100 text-fuchsia-800 ring-fuchsia-300 font-semibold tracking-wide`}>URGENT</span>;
 }
 
 /** Titik warna kecil berdasarkan stempel urgensi untuk tepi kiri baris. */
 export const rowAccent = (u: Urgency, urgent: boolean) =>
-  urgent ? "border-l-fuchsia-700" : u === "LATE" ? "border-l-red-600" : u === "WARNING" ? "border-l-amber-400" : "border-l-transparent";
+  urgent ? "border-l-fuchsia-400" : u === "LATE" ? "border-l-rose-400" : u === "WARNING" ? "border-l-amber-300" : "border-l-transparent";

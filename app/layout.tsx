@@ -1,9 +1,12 @@
 import React from 'react';
+import { Inter } from 'next/font/google';
 import './globals.css';
 
+const inter = Inter({ subsets: ['latin'], display: 'swap', variable: '--font-inter' });
+
 export const metadata = {
-  title: 'LIMS Tekstil - Lab Color Matching',
-  description: 'System LIMS Pengujian Sampel Warna Kain',
+  title: 'LIMS Lab Color Matching · PT Nagasakti Kurnia Textile Mills',
+  description: 'Sistem LIMS pengujian sampel warna kain PT Nagasakti Kurnia Textile Mills',
 };
 
 export default function RootLayout({
@@ -12,8 +15,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="id">
-      <body className="bg-slate-50 text-slate-800 antialiased">{children}</body>
+    <html lang="id" className={inter.variable}>
+      <body className="bg-canvas text-ink antialiased">{children}</body>
     </html>
   );
 }

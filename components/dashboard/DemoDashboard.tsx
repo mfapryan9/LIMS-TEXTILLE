@@ -130,7 +130,7 @@ export function DemoDashboard() {
           colorDirection: s.colorDirection, colorCode: s.colorCode,
           processTypeId: s.processTypeId, processName: processName.get(s.processTypeId) ?? "-",
           machineId: s.machineId, machineName: machineName.get(s.machineId) ?? "-",
-          fabricProblem: s.fabricProblem, receivedDate: s.receivedDate, dueDate: s.dueDate,
+          fabricProblem: s.fabricProblem, problemDescription: null, receivedDate: s.receivedDate, dueDate: s.dueDate,
           status: s.status, isUrgent: s.isUrgent,
           trialNo: t?.trialNo ?? 0,
           openTrialId: t?.status === "BERJALAN" ? t.id : null,
