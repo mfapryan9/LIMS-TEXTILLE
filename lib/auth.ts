@@ -36,7 +36,7 @@ export function destroySession() {
   cookies().delete(COOKIE);
 }
 
-function readSessionUserId(): string | null {
+function readSession(): { userId: string; issuedAt: number } | null {
   const raw = cookies().get(COOKIE)?.value;
   if (!raw) return null;
   const [userId, exp, sig] = raw.split(".");
@@ -45,15 +45,17 @@ function readSessionUserId(): string | null {
   const given = Buffer.from(sig);
   if (expected.length !== given.length || !timingSafeEqual(expected, given)) return null;
   if (Number(exp) < Date.now()) return null;
-  return userId;
+  return { userId, issuedAt: Number(exp) - MAX_AGE_SEC * 1000 };
 }
 
 /** User yang sedang login, atau null. */
 export async function findSessionUser(): Promise<SessionUser | null> {
-  const id = readSessionUserId();
-  if (!id) return null;
-  const u = await prisma.user.findUnique({ where: { id }, include: { role: true } });
+  const s = readSession();
+  if (!s) return null;
+  const u = await prisma.user.findUnique({ where: { id: s.userId }, include: { role: true } });
   if (!u || !u.isActive) return null;
+  // Password diganti / di-reset setelah sesi ini dibuat → wajib login ulang
+  if (u.passwordChangedAt && u.passwordChangedAt.getTime() > s.issuedAt) return null;
   return {
     id: u.id,
     name: u.name,
@@ -64,6 +66,7 @@ export async function findSessionUser(): Promise<SessionUser | null> {
     canMarkUrgent: u.role.canMarkUrgent,
     canManageMaster: u.role.canManageMaster,
     canEditSample: u.role.canEditSample,
+    canManageUsers: u.role.canManageUsers,
     notificationsSeenAt: u.notificationsSeenAt?.toISOString() ?? null,
   };
 }

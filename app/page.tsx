@@ -4,6 +4,7 @@ import { ACTIVE_STATUSES, buildStandardTimeMap, calculateCR, dateOnlyDayNumber, 
 import { deriveNotifications } from "@/lib/roles";
 import { DashboardClient } from "@/components/dashboard/DashboardClient";
 import type { SampleRow } from "@/components/dashboard/badges";
+import { changeOwnPassword, createUser, resetUserPassword, updateUser } from "@/app/user-actions";
 import { approve, changeDueDate, createSample, finishTrial, markNotificationsSeen, reject, setUrgent, startTrial, updateSample } from "@/app/actions";
 import { logout } from "@/app/login/actions";
 
@@ -28,6 +29,14 @@ export default async function DashboardPage() {
     prisma.machine.findMany({ where: { isActive: true }, orderBy: { name: "asc" } }),
     prisma.processType.findMany({ where: { isActive: true }, orderBy: { name: "asc" } }),
   ]);
+
+  // Kelola pengguna: hanya dimuat untuk Kepala Laboratorium (canManageUsers)
+  const [users, roles] = user.canManageUsers
+    ? await Promise.all([
+        prisma.user.findMany({ select: { id: true, username: true, name: true, roleId: true, isActive: true, createdAt: true } }),
+        prisma.role.findMany({ orderBy: { name: "asc" }, select: { id: true, code: true, name: true, viewMode: true, canApprove: true, canEditSample: true, canManageUsers: true } }),
+      ])
+    : [[], []];
 
   const timeMap = buildStandardTimeMap(times);
   const enriched = sortByPriority(
@@ -103,6 +112,18 @@ export default async function DashboardPage() {
         create: createSample,
         update: updateSample,
       }}
+      userAdmin={
+        user.canManageUsers
+          ? {
+              users: users.map((u) => ({ ...u, createdAt: u.createdAt.toISOString() })),
+              roles,
+              create: createUser,
+              update: updateUser,
+              resetPassword: resetUserPassword,
+            }
+          : undefined
+      }
+      changePassword={changeOwnPassword}
       onLogout={logout}
     />
   );

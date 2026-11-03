@@ -57,6 +57,7 @@ model Role {
   canMarkUrgent Boolean @default(false) // PPIC & Marketing
   canManageMaster Boolean @default(false) // input/ubah waktu proses standar (p)
   canEditSample Boolean @default(false) // tambah (scan) & edit SPK: Operator Lab, Kaur Lab, Kasi, PPIC, Marketing
+  canManageUsers Boolean @default(false) // tambah user, ubah peran, reset password, nonaktifkan: Kepala Laboratorium
   users       User[]
 
   @@map("roles")
@@ -71,6 +72,7 @@ model User {
   role                Role     @relation(fields: [roleId], references: [id])
   isActive            Boolean  @default(true)
   notificationsSeenAt DateTime? // untuk badge "belum dibaca" di header
+  passwordChangedAt   DateTime? // sesi yang dibuat sebelum waktu ini tidak berlaku lagi
   createdAt           DateTime @default(now())
   updatedAt           DateTime @updatedAt
 

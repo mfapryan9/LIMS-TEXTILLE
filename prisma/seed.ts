@@ -18,7 +18,7 @@ const MS_PER_DAY = 86_400_000;
 
 type RoleDef = {
   code: string; name: string; viewMode: "OPERATOR" | "APPROVER" | "PLANNER" | "MONITOR";
-  canApprove?: boolean; canEditDue?: boolean; canMarkUrgent?: boolean; canManageMaster?: boolean; canEditSample?: boolean;
+  canApprove?: boolean; canEditDue?: boolean; canMarkUrgent?: boolean; canManageMaster?: boolean; canEditSample?: boolean; canManageUsers?: boolean;
 };
 
 /** Tanggal kalender (YYYY-MM-DD) → kolom @db.Date */
@@ -39,7 +39,7 @@ async function main() {
   for (const r of ROLE_SEED as readonly RoleDef[]) {
     const flags = {
       canApprove: !!r.canApprove, canEditDue: !!r.canEditDue, canMarkUrgent: !!r.canMarkUrgent,
-      canManageMaster: !!r.canManageMaster, canEditSample: !!r.canEditSample,
+      canManageMaster: !!r.canManageMaster, canEditSample: !!r.canEditSample, canManageUsers: !!r.canManageUsers,
     };
     const role = await prisma.role.upsert({
       where: { code: r.code },

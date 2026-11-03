@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { BadgeCheck, CalendarDays, ListChecks, LogOut, RefreshCw, ScanLine, Zap } from "lucide-react";
+import { BadgeCheck, CalendarDays, KeyRound, ListChecks, LogOut, RefreshCw, ScanLine, Users, Zap } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import type { Notif, SessionUser, ViewMode } from "@/lib/roles";
@@ -10,7 +10,10 @@ import { defaultDueDate, todayJakarta, type SampleStatusKey } from "@/lib/cr";
 import type { SampleFormResult, SampleInput } from "@/lib/sample-input";
 import { initials, type SampleRow } from "./badges";
 import { applyFilters, DEFAULT_FILTERS, FilterBar, MachineGroupTabs, NotificationBell, StatsStrip, type Filters, type MachineGroup } from "./header-parts";
+import { PasswordDialog } from "./PasswordDialog";
 import { ResultsTable } from "./ResultsTable";
+import { UsersPanel, type UserAdmin } from "./UsersPanel";
+import type { UserFormResult } from "@/lib/user-input";
 import { SampleForm } from "./SampleForm";
 import { fmtDate, SampleTable, type SampleActions } from "./SampleTable";
 
@@ -45,13 +48,18 @@ export function DashboardClient(props: {
   machines: MachineGroup[]; // kelompok mesin = sheet Excel, urut A–E
   actions: SampleActions & { markNotificationsSeen: () => Promise<void> };
   editor?: SampleEditor; // tambah / edit SPK (hanya untuk role yang berhak)
+  userAdmin?: UserAdmin; // kelola pengguna (hanya Kepala Laboratorium)
+  changePassword?: (oldPassword: string, newPassword: string) => Promise<UserFormResult>;
   onLogout?: () => Promise<void>;
 }) {
-  const { user, rows, notifs, machines, actions, editor, onLogout } = props;
+  const { user, rows, notifs, machines, actions, editor, userAdmin, changePassword, onLogout } = props;
   const copy = VIEW_COPY[user.viewMode];
   const canEdit = !!editor && user.canEditSample;
   const showResults = user.viewMode !== "OPERATOR";
-  const [tab, setTab] = useState<"queue" | "results">("queue");
+  const showUsers = !!userAdmin && user.canManageUsers;
+  const [tab, setTab] = useState<"queue" | "results" | "users">("queue");
+  const [pwOpen, setPwOpen] = useState(false);
+  const pageTitle = tab === "results" ? "Hasil uji selesai" : tab === "users" ? "Kelola pengguna" : copy.title;
   const router = useRouter();
 
   // CR dihitung terhadap "hari ini": muat ulang data berkala & saat tab kembali aktif,
@@ -109,6 +117,7 @@ export function DashboardClient(props: {
   const nav = [
     { key: "queue" as const, label: "Antrean uji", icon: ListChecks, count: activeCount },
     ...(showResults ? [{ key: "results" as const, label: "Hasil uji selesai", icon: BadgeCheck, count: doneCount }] : []),
+    ...(showUsers ? [{ key: "users" as const, label: "Kelola pengguna", icon: Users, count: userAdmin!.users.filter((u) => u.isActive).length }] : []),
   ];
   const roleLabel = user.roleCode.replaceAll("_", " ").toLowerCase();
 
@@ -157,9 +166,14 @@ export function DashboardClient(props: {
           <div className="flex items-center gap-3 rounded-2xl bg-white/10 p-3">
             <span aria-hidden className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-accent text-sm font-bold text-brand-900">{initials(user.name)}</span>
             <span className="min-w-0 flex-1 leading-tight">
-              <span className="block truncate text-sm font-semibold text-white">{user.name}</span>
+              <span className="line-clamp-2 block text-sm font-semibold text-white">{user.name}</span>
               <span className="block truncate text-xs capitalize text-brand-100/80">{roleLabel}</span>
             </span>
+            {changePassword && (
+              <button type="button" onClick={() => setPwOpen(true)} aria-label="Ganti password" title="Ganti password" className="rounded-lg p-2 text-brand-100 transition hover:bg-white/15 hover:text-white">
+                <KeyRound className="h-[18px] w-[18px]" aria-hidden />
+              </button>
+            )}
             {onLogout && (
               <form action={onLogout}>
                 <button type="submit" aria-label="Keluar" title="Keluar" className="rounded-lg p-2 text-brand-100 transition hover:bg-white/15 hover:text-white">
@@ -178,7 +192,7 @@ export function DashboardClient(props: {
             <Image src="/logo-emblem.png" alt="Logo PT Nagasakti Kurnia Textile Mills" width={36} height={36} priority className="h-9 w-9 shrink-0 xl:hidden" />
             <div className="min-w-0 leading-tight">
               <p className="hidden text-xs font-medium text-ink-soft sm:block">DyeLIMS · PT. Nagasakti Kurnia Textile Mills</p>
-              <p className="truncate text-sm font-semibold text-ink sm:text-base">{tab === "results" ? "Hasil uji selesai" : copy.title}</p>
+              <p className="truncate text-sm font-semibold text-ink sm:text-base">{pageTitle}</p>
             </div>
           </div>
           <div className="flex items-center gap-2">
@@ -205,6 +219,11 @@ export function DashboardClient(props: {
                 <span className="sm:hidden">SPK</span>
               </button>
             )}
+            {changePassword && (
+              <button type="button" onClick={() => setPwOpen(true)} aria-label="Ganti password" title="Ganti password" className="flex h-10 w-10 items-center justify-center rounded-xl bg-white text-ink-muted ring-1 ring-line xl:hidden">
+                <KeyRound className="h-[18px] w-[18px]" aria-hidden />
+              </button>
+            )}
             {onLogout && (
               <form action={onLogout} className="xl:hidden">
                 <button type="submit" aria-label="Keluar" className="flex h-10 w-10 items-center justify-center rounded-xl bg-white text-ink-muted ring-1 ring-line">
@@ -219,12 +238,14 @@ export function DashboardClient(props: {
       <main className="mx-auto max-w-[96rem] space-y-6 px-4 py-6 sm:px-6 xl:px-8">
         {/* Judul halaman */}
         <div className="animate-fade-up">
-          <h1 className="text-2xl font-bold tracking-tight text-brand-700 sm:text-3xl">{tab === "results" ? "Hasil uji selesai" : copy.title}</h1>
+          <h1 className="text-2xl font-bold tracking-tight text-brand-700 sm:text-3xl">{pageTitle}</h1>
           <div aria-hidden className="mt-2 h-1 w-12 rounded-full bg-accent" />
           <p className="mt-1 max-w-3xl text-sm text-ink-muted">
             {tab === "results"
               ? "Sampel yang sudah di-ACC: jumlah uji/matching dengan master, ACC pada uji ke berapa, dan durasi sejak masuk lab."
-              : copy.hint}
+              : tab === "users"
+                ? "Tambah akun baru, ubah nama atau peran, reset password yang lupa, dan nonaktifkan akun yang tidak dipakai lagi."
+                : copy.hint}
           </p>
           {tab === "queue" && (
             <p className="mt-2 inline-flex items-center gap-1.5 rounded-full bg-brand-50 px-3 py-1 text-xs font-medium text-brand-800 ring-1 ring-brand-100">
@@ -234,7 +255,7 @@ export function DashboardClient(props: {
         </div>
 
         {/* Menu tampilan (layar < 1280px; desktop memakai sidebar) */}
-        {showResults && (
+        {nav.length > 1 && (
           <div role="tablist" aria-label="Tampilan" className="inline-flex rounded-xl bg-white p-1 shadow-card ring-1 ring-line xl:hidden">
             {nav.map(({ key, label, count }) => (
               <button key={key} type="button" role="tab" aria-selected={tab === key} onClick={() => setTab(key)}
@@ -245,7 +266,9 @@ export function DashboardClient(props: {
           </div>
         )}
 
-        {tab === "results" ? (
+        {tab === "users" && userAdmin ? (
+          <UsersPanel admin={userAdmin} meId={user.id} />
+        ) : tab === "results" ? (
           <ResultsTable rows={rows} groups={machines} />
         ) : (
           <>
@@ -273,6 +296,7 @@ export function DashboardClient(props: {
         </div>
       </footer>
 
+      {pwOpen && changePassword && <PasswordDialog mode="own" onSubmit={changePassword} onClose={() => setPwOpen(false)} />}
       {form && editor && (
         <SampleForm
           key={form.mode === "edit" ? form.row.id : "create"}

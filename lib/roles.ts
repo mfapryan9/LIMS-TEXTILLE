@@ -12,6 +12,7 @@ export interface SessionUser {
   canMarkUrgent: boolean;
   canManageMaster: boolean;
   canEditSample: boolean;
+  canManageUsers: boolean;
   notificationsSeenAt: string | null;
 }
 
@@ -19,11 +20,12 @@ export interface SessionUser {
  * Seed untuk tabel roles.
  * - Operator Lab: satu-satunya yang mengelola data (tambah/scan & edit SPK, due date, urgent) dan menjalankan uji.
  * - Kepala Laboratorium & Kepala Produksi DF: ACC hasil uji, atau reject → kembali ke operator untuk diuji ulang.
+ * - Kepala Laboratorium juga mengelola akun pengguna (tambah user, ubah peran, reset password, nonaktifkan).
  * - Selain itu: hanya memantau.
  */
 export const ROLE_SEED = [
   { code: "OPERATOR_LAB", name: "Operator Lab", viewMode: "OPERATOR", canEditSample: true, canEditDue: true, canMarkUrgent: true },
-  { code: "KALAB", name: "Kepala Laboratorium", viewMode: "APPROVER", canApprove: true },
+  { code: "KALAB", name: "Kepala Laboratorium", viewMode: "APPROVER", canApprove: true, canManageUsers: true },
   { code: "KEPALA_PRODUKSI_DF", name: "Kepala Produksi DF", viewMode: "APPROVER", canApprove: true },
   { code: "KAUR_LAB", name: "Kepala Urusan Laboratorium", viewMode: "MONITOR" },
   { code: "KASI", name: "Kepala Seksi", viewMode: "MONITOR" },
@@ -43,13 +45,14 @@ export const VIEW_DEFAULT_STATUSES: Record<ViewMode, string[] | "ALL"> = {
 };
 
 /** SERVER-SIDE guard: panggil di setiap server action / route handler. UI hanya menyembunyikan tombol. */
-export function assertCan(user: SessionUser, action: "approve" | "editDue" | "markUrgent" | "runTrial" | "manageMaster" | "editSample") {
+export function assertCan(user: SessionUser, action: "approve" | "editDue" | "markUrgent" | "runTrial" | "manageMaster" | "editSample" | "manageUsers") {
   const ok =
     (action === "approve" && user.canApprove) ||
     (action === "editDue" && user.canEditDue) ||
     (action === "editSample" && user.canEditSample) ||
     (action === "markUrgent" && user.canMarkUrgent) ||
     (action === "manageMaster" && user.canManageMaster) ||
+    (action === "manageUsers" && user.canManageUsers) ||
     (action === "runTrial" && user.viewMode === "OPERATOR");
   if (!ok) throw new Error("FORBIDDEN");
 }

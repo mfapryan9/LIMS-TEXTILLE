@@ -3,6 +3,12 @@
 @tailwind utilities;
 
 @layer base {
+  /* Sembunyikan tombol lihat-password bawaan Edge; kita punya tombol sendiri */
+  input::-ms-reveal,
+  input::-ms-clear {
+    display: none;
+  }
+
   ::selection {
     background: theme('colors.brand.200');
   }
