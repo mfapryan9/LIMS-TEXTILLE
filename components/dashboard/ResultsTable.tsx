@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { BadgeCheck, CheckCircle2, FlaskConical, Inbox, Search, Target, Timer, type LucideIcon } from "lucide-react";
-import { fmtDays, type SampleRow } from "./badges";
+import { fmtDays, MachineChip, machineTone, type SampleRow } from "./badges";
 import { fieldCls, type MachineGroup } from "./header-parts";
 import { fmtDate } from "./SampleTable";
 
@@ -82,7 +82,7 @@ export function ResultsTable({ rows, groups }: { rows: SampleRow[]; groups: Mach
                     {r.colorCode && <p className="text-xs text-ink-muted">Warna {r.colorCode}</p>}
                   </td>
                   <td className="px-4 py-4">
-                    <span className="inline-flex rounded-md bg-canvas px-2 py-0.5 text-xs font-semibold text-ink ring-1 ring-line">{r.machineName}</span>
+                    <MachineChip name={r.machineName} color={r.machineColor} />
                     <p className="mt-1.5 text-ink">{r.processName}</p>
                   </td>
                   <td className="whitespace-nowrap px-4 py-4">
@@ -133,11 +133,13 @@ function GroupSummary({ groups, done, value, onChange }: { groups: MachineGroup[
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
         {stats.map(({ g, n, days, trials }) => {
           const sel = value === g.id;
+          const tone = machineTone(g.color);
           return (
             <button key={g.id} type="button" onClick={() => onChange(sel ? "ALL" : g.id)} aria-pressed={sel} title={g.processes.join(", ")}
-              className={`rounded-2xl bg-white p-4 text-left shadow-card ring-1 transition hover:-translate-y-0.5 hover:shadow-soft ${sel ? "ring-2 ring-brand-500" : "ring-line"}`}>
+              className={`relative overflow-hidden rounded-2xl bg-white p-4 pt-5 text-left shadow-card ring-1 transition hover:-translate-y-0.5 hover:shadow-soft ${sel ? `ring-2 ${tone.ring}` : "ring-line"}`}>
+              <span aria-hidden className={`absolute inset-x-0 top-0 h-1.5 ${tone.bar}`} />
               <div className="flex items-start justify-between gap-2">
-                <p className="font-semibold text-ink">{g.name}</p>
+                <p className="flex items-center gap-2 font-semibold text-ink"><span aria-hidden className={`h-2.5 w-2.5 rounded-full ${tone.dot}`} />{g.name}</p>
                 <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-xs font-bold tabular-nums text-emerald-700">{n}</span>
               </div>
               <p className="mt-0.5 line-clamp-1 text-xs text-ink-soft">{g.processes.length} proses lab</p>

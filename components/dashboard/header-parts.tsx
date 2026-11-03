@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Bell, CheckCheck, CheckCircle2, ClipboardCheck, FlaskConical, Hourglass, Layers, RotateCcw, Search, type LucideIcon } from "lucide-react";
 import type { Notif, NotifType } from "@/lib/roles";
-import { STATUS_LABEL, type SampleRow } from "./badges";
+import { machineTone, STATUS_LABEL, type SampleRow } from "./badges";
 import type { SampleStatusKey } from "@/lib/cr";
 
 /* ───────── Notifikasi di header (FR-10) ───────── */
@@ -219,6 +219,7 @@ export interface MachineGroup {
   name: string; // nama sheet, mis. "A. Thermosol"
   p: number | null; // processing time kelompok (hari)
   processes: string[]; // proses lab dalam kelompok ini
+  color: number; // indeks warna khas kelompok (MACHINE_TONES)
 }
 
 /** Tab per kelompok mesin seperti sheet di Excel. Angka = sampel aktif (belum ACC) di kelompok itu. */
@@ -237,7 +238,8 @@ export function MachineGroupTabs({
   const active = (id: string) => rows.filter((r) => r.status !== "DISETUJUI" && inGroup(r, id)).length;
   const urgent = (id: string) => rows.filter((r) => r.isUrgent && r.status !== "DISETUJUI" && inGroup(r, id)).length;
 
-  const tab = (id: string, name: string, sub: string, title?: string) => {
+  const tab = (id: string, name: string, sub: string, title?: string, color?: number) => {
+    const tone = color === undefined ? null : machineTone(color);
     const sel = value === id;
     const u = urgent(id);
     return (
@@ -249,14 +251,15 @@ export function MachineGroupTabs({
         onClick={() => onChange(id)}
         title={title}
         className={`flex shrink-0 items-center gap-2.5 rounded-xl px-3.5 py-2 text-left transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand-600 ${
-          sel ? "bg-brand-600 text-white shadow-glow" : "text-ink-muted hover:bg-white hover:text-ink hover:shadow-card"
+          sel ? `${tone ? tone.solid : "bg-brand-600 text-white"} shadow-soft` : "text-ink-muted hover:bg-white hover:text-ink hover:shadow-card"
         }`}
       >
+        {tone && <span aria-hidden className={`h-3 w-3 shrink-0 rounded-full ring-2 ${sel ? "bg-white/90 ring-white/40" : `${tone.dot} ring-white`}`} />}
         <span className="leading-tight">
           <span className="block whitespace-nowrap text-sm font-semibold">{name}</span>
-          <span className={`block whitespace-nowrap text-[11px] ${sel ? "text-white/60" : "text-ink-soft"}`}>{sub}</span>
+          <span className={`block whitespace-nowrap text-[11px] ${sel ? "opacity-75" : "text-ink-soft"}`}>{sub}</span>
         </span>
-        <span className={`rounded-lg px-2 py-0.5 text-xs font-bold tabular-nums ${sel ? "bg-white/15 text-white" : "bg-canvas text-ink-muted ring-1 ring-line"}`} title="Sampel aktif">
+        <span className={`rounded-lg px-2 py-0.5 text-xs font-bold tabular-nums ${sel ? "bg-white/25" : "bg-canvas text-ink-muted ring-1 ring-line"}`} title="Sampel aktif">
           {active(id)}
         </span>
         {u > 0 && (
@@ -271,7 +274,7 @@ export function MachineGroupTabs({
   return (
     <div role="tablist" aria-label="Kelompok mesin" className="scrollbar-thin flex gap-1 overflow-x-auto rounded-2xl bg-white/70 p-1.5 ring-1 ring-line backdrop-blur">
       {tab("ALL", "Semua kelompok", `${groups.length} kelompok mesin`)}
-      {groups.map((g) => tab(g.id, g.name, g.p != null ? `p ${+g.p.toFixed(2)} hr` : "p belum diatur", g.processes.join(", ")))}
+      {groups.map((g) => tab(g.id, g.name, g.p != null ? `p ${+g.p.toFixed(2)} hr` : "p belum diatur", g.processes.join(", "), g.color))}
     </div>
   );
 }

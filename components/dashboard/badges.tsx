@@ -14,6 +14,7 @@ export type SampleRow = {
   processName: string;
   machineId: string;
   machineName: string;
+  machineColor: number; // indeks warna kelompok mesin (lihat MACHINE_TONES)
   processTypeId: string;
   fabricProblem: string | null;
   problemDescription: string | null;
@@ -37,6 +38,35 @@ export type SampleRow = {
   urgency: Urgency;
   standardDays: number | null;
 };
+
+/**
+ * Warna pembeda tiap kelompok mesin (urut nama: A. Thermosol, B. CPB, …). Kelompok baru memakai warna berikutnya.
+ * Sengaja tidak memakai pink/fuchsia (URGENT) dan merah (Terlambat).
+ */
+export const MACHINE_TONES = [
+  { chip: "bg-orange-50 text-orange-800 ring-orange-200", dot: "bg-orange-500", solid: "bg-orange-500 text-white", ring: "ring-orange-400", bar: "bg-orange-400" },
+  { chip: "bg-blue-50 text-blue-800 ring-blue-200", dot: "bg-blue-500", solid: "bg-blue-600 text-white", ring: "ring-blue-400", bar: "bg-blue-400" },
+  { chip: "bg-emerald-50 text-emerald-800 ring-emerald-200", dot: "bg-emerald-500", solid: "bg-emerald-600 text-white", ring: "ring-emerald-400", bar: "bg-emerald-400" },
+  { chip: "bg-violet-50 text-violet-800 ring-violet-200", dot: "bg-violet-500", solid: "bg-violet-600 text-white", ring: "ring-violet-400", bar: "bg-violet-400" },
+  { chip: "bg-yellow-50 text-yellow-900 ring-yellow-300", dot: "bg-yellow-400", solid: "bg-yellow-400 text-yellow-950", ring: "ring-yellow-400", bar: "bg-yellow-400" },
+  { chip: "bg-cyan-50 text-cyan-800 ring-cyan-200", dot: "bg-cyan-500", solid: "bg-cyan-600 text-white", ring: "ring-cyan-400", bar: "bg-cyan-400" },
+  { chip: "bg-indigo-50 text-indigo-800 ring-indigo-200", dot: "bg-indigo-500", solid: "bg-indigo-600 text-white", ring: "ring-indigo-400", bar: "bg-indigo-400" },
+  { chip: "bg-lime-50 text-lime-900 ring-lime-300", dot: "bg-lime-500", solid: "bg-lime-500 text-lime-950", ring: "ring-lime-400", bar: "bg-lime-400" },
+  { chip: "bg-stone-100 text-stone-800 ring-stone-300", dot: "bg-stone-500", solid: "bg-stone-600 text-white", ring: "ring-stone-400", bar: "bg-stone-400" },
+] as const;
+
+export const machineTone = (i: number) => MACHINE_TONES[((i % MACHINE_TONES.length) + MACHINE_TONES.length) % MACHINE_TONES.length];
+
+/** Chip nama kelompok mesin dengan warna khas kelompoknya. */
+export function MachineChip({ name, color }: { name: string; color: number }) {
+  const t = machineTone(color);
+  return (
+    <span className={`inline-flex items-center gap-1.5 whitespace-nowrap rounded-md px-2 py-0.5 text-xs font-semibold ring-1 ring-inset ${t.chip}`}>
+      <span aria-hidden className={`h-2 w-2 rounded-full ${t.dot}`} />
+      {name}
+    </span>
+  );
+}
 
 export const STATUS_LABEL: Record<SampleStatusKey, string> = {
   MENUNGGU: "Menunggu",

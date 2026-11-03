@@ -3,7 +3,7 @@
 import { useState, useTransition } from "react";
 import { CalendarClock, Check, FlaskConical, Inbox, Pencil, Play, RotateCcw, Square, Timer, X, Zap } from "lucide-react";
 import type { SessionUser } from "@/lib/roles";
-import { CrBadge, StatusBadge, UrgentBadge, fmtDays, rowAccent, type SampleRow } from "./badges";
+import { CrBadge, MachineChip, StatusBadge, UrgentBadge, fmtDays, rowAccent, type SampleRow } from "./badges";
 
 /** Diisi dengan Server Actions (app/actions.ts). Setiap action WAJIB memanggil assertCan() + menulis AuditLog. */
 export interface SampleActions {
@@ -182,7 +182,7 @@ export function SampleTable({ rows, user, actions, highlightId, onEdit }: { rows
                   <p className="mt-1 text-[11px] font-medium uppercase tracking-wide text-ink-soft">{r.orderType === "PRODUKSI" ? "Produksi" : "Marketing"}{r.fabricProblem ? ` · Problem: ${r.fabricProblem}` : ""}</p>
                 </td>
                 <td className="px-4 py-4">
-                  <span className="inline-flex rounded-md bg-canvas px-2 py-0.5 text-xs font-semibold text-ink ring-1 ring-line">{r.machineName}</span>
+                  <MachineChip name={r.machineName} color={r.machineColor} />
                   <p className="mt-1.5 text-sm text-ink">{r.processName}</p>
                   <p className="text-xs text-ink-soft">{r.standardDays ? `p = ${+r.standardDays.toFixed(2)} hr` : "p belum diatur"}</p>
                 </td>

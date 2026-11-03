@@ -37,6 +37,8 @@ export default async function DashboardPage() {
     ),
   );
   const today = jakartaDayNumber();
+  // Warna khas kelompok mesin = urutan nama (A. Thermosol = 0, B. CPB = 1, …); kelompok tidak aktif di akhir
+  const machineColor = (id: string) => { const i = machines.findIndex((m) => m.id === id); return i < 0 ? machines.length : i; };
 
   const rows: SampleRow[] = enriched.map((s) => {
     const last = s.trials[s.trials.length - 1];
@@ -51,7 +53,7 @@ export default async function DashboardPage() {
       id: s.id, orderNo: s.orderNo, orderDate, spkNo: s.spkNo, orderType: s.orderType,
       customerName: s.customerName, motif: s.motif, colorDirection: s.colorDirection, colorCode: s.colorCode,
       processTypeId: s.processTypeId, processName: s.processType.name,
-      machineId: s.machineId, machineName: s.machine.name,
+      machineId: s.machineId, machineName: s.machine.name, machineColor: machineColor(s.machineId),
       fabricProblem: s.fabricProblem, problemDescription: s.problemDescription,
       receivedDate: s.receivedDate, dueDate: s.dueDate,
       status: s.status, isUrgent: s.isUrgent,
@@ -83,12 +85,13 @@ export default async function DashboardPage() {
       user={user}
       rows={rows}
       notifs={notifs}
-      machines={machines.map((m) => {
+      machines={machines.map((m, color) => {
         // Kelompok mesin = sheet Excel; p sama untuk semua proses di kelompoknya
         const own = times.filter((t) => t.machineId === m.id);
         return {
           id: m.id,
           name: m.name,
+          color,
           p: own.length ? own[0].standardDays.toNumber() : null,
           processes: processTypes.filter((p) => own.some((t) => t.processTypeId === p.id)).map((p) => p.name),
         };
