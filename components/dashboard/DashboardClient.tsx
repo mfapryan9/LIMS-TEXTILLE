@@ -115,27 +115,28 @@ export function DashboardClient(props: {
   return (
     <div className="min-h-screen bg-canvas text-ink xl:pl-64">
       {/* ── Sidebar (desktop) */}
-      <aside className="fixed inset-y-0 left-0 z-30 hidden w-64 flex-col border-r border-line bg-white xl:flex">
+      <aside className="fixed inset-y-0 left-0 z-30 hidden w-64 flex-col bg-gradient-to-b from-brand-600 to-brand-700 text-white xl:flex">
         <div className="flex items-center gap-3 px-6 py-5">
-          <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-gradient-to-br from-brand-800 to-brand-600 shadow-glow">
+          <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-white/10 ring-1 ring-white/20">
             <Image src="/logo-emblem-white.png" alt="Logo PT Nagasakti Kurnia Textile Mills" width={28} height={28} priority className="h-7 w-7" />
           </span>
           <div className="leading-tight">
-            <p className="text-sm font-bold tracking-wide text-ink">NAGASAKTI</p>
-            <p className="text-xs text-ink-soft">Kurnia Textile Mills</p>
+            <p className="text-sm font-bold tracking-wide text-white">NAGASAKTI</p>
+            <p className="text-xs text-brand-100/80">Kurnia Textile Mills</p>
           </div>
         </div>
+        <div aria-hidden className="mx-6 h-0.5 w-10 rounded-full bg-accent" />
 
-        <p className="px-6 pb-2 pt-4 text-[11px] font-semibold uppercase tracking-wider text-ink-soft">Lab Color Matching</p>
+        <p className="px-6 pb-2 pt-5 text-[11px] font-semibold uppercase tracking-wider text-accent-200">Lab Color Matching</p>
         <div role="tablist" aria-label="Menu" aria-orientation="vertical" className="space-y-1 px-3">
           {nav.map(({ key, label, icon: Icon, count }) => {
             const sel = tab === key;
             return (
               <button key={key} type="button" role="tab" aria-selected={sel} onClick={() => setTab(key)}
-                className={`flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold transition ${sel ? "bg-brand-50 text-brand-800" : "text-ink-muted hover:bg-canvas hover:text-ink"}`}>
-                <Icon className={`h-[18px] w-[18px] ${sel ? "text-brand-600" : ""}`} aria-hidden />
+                className={`flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold transition ${sel ? "bg-canvas text-brand-700 shadow-[inset_3px_0_0_0_theme(colors.accent.DEFAULT)]" : "text-brand-50/85 hover:bg-white/10 hover:text-white"}`}>
+                <Icon className={`h-[18px] w-[18px] ${sel ? "text-brand-400" : ""}`} aria-hidden />
                 <span className="flex-1 text-left">{label}</span>
-                <span className={`rounded-full px-2 py-0.5 text-xs tabular-nums ${sel ? "bg-white text-brand-700 ring-1 ring-brand-200" : "bg-canvas text-ink-soft"}`}>{count}</span>
+                <span className={`rounded-full px-2 py-0.5 text-xs tabular-nums ${sel ? "bg-accent-100 text-accent-700" : "bg-white/10 text-brand-50"}`}>{count}</span>
               </button>
             );
           })}
@@ -152,16 +153,16 @@ export function DashboardClient(props: {
           </button>
         )}
 
-        <div className="mt-auto border-t border-line p-4">
-          <div className="flex items-center gap-3 rounded-2xl bg-canvas p-3">
-            <span aria-hidden className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-brand-500 to-brand-700 text-sm font-bold text-white">{initials(user.name)}</span>
+        <div className="mt-auto border-t border-white/10 p-4">
+          <div className="flex items-center gap-3 rounded-2xl bg-white/10 p-3">
+            <span aria-hidden className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-accent text-sm font-bold text-brand-900">{initials(user.name)}</span>
             <span className="min-w-0 flex-1 leading-tight">
-              <span className="block truncate text-sm font-semibold text-ink">{user.name}</span>
-              <span className="block truncate text-xs capitalize text-ink-soft">{roleLabel}</span>
+              <span className="block truncate text-sm font-semibold text-white">{user.name}</span>
+              <span className="block truncate text-xs capitalize text-brand-100/80">{roleLabel}</span>
             </span>
             {onLogout && (
               <form action={onLogout}>
-                <button type="submit" aria-label="Keluar" title="Keluar" className="rounded-lg p-2 text-ink-soft transition hover:bg-white hover:text-rose-600">
+                <button type="submit" aria-label="Keluar" title="Keluar" className="rounded-lg p-2 text-brand-100 transition hover:bg-white/15 hover:text-white">
                   <LogOut className="h-[18px] w-[18px]" aria-hidden />
                 </button>
               </form>
@@ -218,7 +219,8 @@ export function DashboardClient(props: {
       <main className="mx-auto max-w-[96rem] space-y-6 px-4 py-6 sm:px-6 xl:px-8">
         {/* Judul halaman */}
         <div className="animate-fade-up">
-          <h1 className="text-2xl font-bold tracking-tight text-ink sm:text-3xl">{tab === "results" ? "Hasil uji selesai" : copy.title}</h1>
+          <h1 className="text-2xl font-bold tracking-tight text-brand-700 sm:text-3xl">{tab === "results" ? "Hasil uji selesai" : copy.title}</h1>
+          <div aria-hidden className="mt-2 h-1 w-12 rounded-full bg-accent" />
           <p className="mt-1 max-w-3xl text-sm text-ink-muted">
             {tab === "results"
               ? "Sampel yang sudah di-ACC: jumlah uji/matching dengan master, ACC pada uji ke berapa, dan durasi sejak masuk lab."
@@ -236,7 +238,7 @@ export function DashboardClient(props: {
           <div role="tablist" aria-label="Tampilan" className="inline-flex rounded-xl bg-white p-1 shadow-card ring-1 ring-line xl:hidden">
             {nav.map(({ key, label, count }) => (
               <button key={key} type="button" role="tab" aria-selected={tab === key} onClick={() => setTab(key)}
-                className={`rounded-lg px-3.5 py-2 text-sm font-semibold transition ${tab === key ? "bg-ink text-white" : "text-ink-muted hover:text-ink"}`}>
+                className={`rounded-lg px-3.5 py-2 text-sm font-semibold transition ${tab === key ? "bg-brand-600 text-white" : "text-ink-muted hover:text-ink"}`}>
                 {label} <span className="opacity-60">({count})</span>
               </button>
             ))}
@@ -263,6 +265,13 @@ export function DashboardClient(props: {
           </>
         )}
       </main>
+
+      <footer className="mt-6 bg-brand-600 text-brand-50">
+        <div className="mx-auto flex max-w-[96rem] flex-wrap items-center justify-between gap-2 px-4 py-4 text-xs sm:px-6 xl:px-8">
+          <span>© {new Date().getFullYear()} PT. Nagasakti Kurnia Textile Mills</span>
+          <span className="inline-flex items-center gap-2"><span aria-hidden className="h-1.5 w-1.5 rounded-full bg-accent" /> LIMS Lab Color Matching</span>
+        </div>
+      </footer>
 
       {form && editor && (
         <SampleForm

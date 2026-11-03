@@ -249,7 +249,7 @@ export function MachineGroupTabs({
         onClick={() => onChange(id)}
         title={title}
         className={`flex shrink-0 items-center gap-2.5 rounded-xl px-3.5 py-2 text-left transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand-600 ${
-          sel ? "bg-ink text-white shadow-soft" : "text-ink-muted hover:bg-white hover:text-ink hover:shadow-card"
+          sel ? "bg-brand-600 text-white shadow-glow" : "text-ink-muted hover:bg-white hover:text-ink hover:shadow-card"
         }`}
       >
         <span className="leading-tight">

@@ -62,7 +62,7 @@ export function ResultsTable({ rows, groups }: { rows: SampleRow[]; groups: Mach
         <div className="scrollbar-thin overflow-x-auto rounded-2xl bg-white shadow-card ring-1 ring-line">
           <table className="w-full min-w-[62rem] text-sm">
             <caption className="sr-only">Hasil uji yang sudah di-ACC, terbaru di atas</caption>
-            <thead className="border-b border-line text-left text-[11px] font-semibold uppercase tracking-wider text-ink-soft">
+            <thead className="border-b border-line bg-surface/60 text-left text-[11px] font-semibold uppercase tracking-wider text-ink-soft">
               <tr>
                 <th scope="col" className="px-4 py-3">SPK / Order</th>
                 <th scope="col" className="px-4 py-3">Mesin · Proses</th>
@@ -126,7 +126,7 @@ function GroupSummary({ groups, done, value, onChange }: { groups: MachineGroup[
       <div className="mb-3 flex items-center justify-between">
         <h2 className="text-base font-semibold text-ink">Per kelompok mesin</h2>
         <button type="button" onClick={() => onChange("ALL")} aria-pressed={value === "ALL"}
-          className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition ${value === "ALL" ? "bg-ink text-white" : "text-ink-muted ring-1 ring-line hover:bg-white"}`}>
+          className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition ${value === "ALL" ? "bg-brand-600 text-white" : "text-ink-muted ring-1 ring-line hover:bg-white"}`}>
           Semua kelompok
         </button>
       </div>

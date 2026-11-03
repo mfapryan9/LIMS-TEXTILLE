@@ -143,7 +143,7 @@ export function SampleTable({ rows, user, actions, highlightId, onEdit }: { rows
     <div className="scrollbar-thin overflow-x-auto rounded-2xl bg-white shadow-card ring-1 ring-line">
       <table className="w-full min-w-[64rem] text-sm">
         <caption className="sr-only">Antrean sampel: urgent paling atas, lalu Critical Ratio terkecil</caption>
-        <thead className="border-b border-line text-left text-[11px] font-semibold uppercase tracking-wider text-ink-soft">
+        <thead className="border-b border-line bg-surface/60 text-left text-[11px] font-semibold uppercase tracking-wider text-ink-soft">
           <tr>
             <th scope="col" className="w-12 px-4 py-3">#</th>
             <th scope="col" className="px-4 py-3">SPK / Order</th>
