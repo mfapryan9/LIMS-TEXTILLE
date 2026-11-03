@@ -1,9 +1,9 @@
 "use client";
 
 import { useEffect, useRef, useState, useTransition, type ReactNode } from "react";
-import { Camera, Check, Loader2, Pencil, Plus, ScanLine, Sparkles, Upload, X } from "lucide-react";
+import { Camera, Check, List, Loader2, Pencil, Plus, ScanLine, Sparkles, Upload, X, Zap } from "lucide-react";
 import { defaultDueDate } from "@/lib/cr";
-import type { SampleFormResult, SampleInput } from "@/lib/sample-input";
+import type { SampleFormResult, SampleInput, SampleTextField } from "@/lib/sample-input";
 import { parseSpkText, type SpkField } from "@/lib/spk-parse";
 
 type Option = { id: string; name: string };
@@ -117,6 +117,18 @@ function Field({ fromPhoto, label, children, hint }: { fromPhoto: boolean; label
   );
 }
 
+/** Nilai opsi "+ Tambah baru…" di dropdown kelompok mesin / proses lab. */
+const NEW = "__new__";
+
+function BackToList({ onClick }: { onClick: () => void }) {
+  return (
+    <button type="button" onClick={onClick} title="Kembali pilih dari daftar"
+      className="inline-flex shrink-0 items-center gap-1 rounded-lg px-2 py-2 text-xs font-semibold text-brand-600 transition hover:bg-brand-50">
+      <List className="h-3.5 w-3.5" aria-hidden /> Daftar
+    </button>
+  );
+}
+
 function FormSection({ title, desc, children }: { title: string; desc?: string; children: ReactNode }) {
   return (
     <fieldset className="rounded-2xl bg-canvas/60 p-4 ring-1 ring-line">
@@ -132,12 +144,16 @@ export function SampleForm(props: {
   initial: SampleInput;
   processTypes: Option[];
   processMachine: Record<string, string>; // proses → mesin (kelompok sheet Excel)
-  machines: Option[];
+  machines: (Option & { p?: number | null })[];
+  canMarkUrgent: boolean;
   onSubmit: (input: SampleInput) => Promise<SampleFormResult>;
   onClose: () => void;
 }) {
-  const { mode, processTypes, processMachine, machines, onSubmit, onClose } = props;
+  const { mode, processTypes, processMachine, machines, canMarkUrgent, onSubmit, onClose } = props;
   const [values, setValues] = useState<SampleInput>(props.initial);
+  // Mode isi baru: kelompok mesin / proses lab yang belum ada di daftar
+  const [addMachine, setAddMachine] = useState(false);
+  const [addProcess, setAddProcess] = useState(false);
   const [dueTouched, setDueTouched] = useState(mode === "edit");
   const [found, setFound] = useState<Set<SpkField>>(new Set());
   const [error, setError] = useState<string | null>(null);
@@ -179,12 +195,14 @@ export function SampleForm(props: {
       const { draft, found: f } = parseSpkText(text, { processTypes, machines });
       setValues((prev) => {
         const next = { ...prev };
-        for (const k of f) (next as Record<string, string>)[k] = draft[k] as string;
+        for (const k of f) (next as unknown as Record<string, string>)[k] = draft[k] as string;
         if (draft.receivedDate && !draft.dueDate) next.dueDate = defaultDueDate(draft.receivedDate);
         if (draft.processTypeId && !draft.machineId && processMachine[draft.processTypeId]) next.machineId = processMachine[draft.processTypeId];
         return next;
       });
       if (draft.dueDate) setDueTouched(true);
+      if (f.includes("machineId" as SpkField) || f.includes("processTypeId" as SpkField)) setAddMachine(false);
+      if (f.includes("processTypeId" as SpkField)) setAddProcess(false);
       setFound(new Set(f));
       setOcr({ state: "done", progress: 1, label: "", text });
       setNotice(f.length ? `${f.length} kolom terisi dari foto. Periksa kembali sebelum menyimpan.` : "Teks terbaca, tetapi tidak ada kolom yang dikenali. Isi form secara manual.");
@@ -199,7 +217,11 @@ export function SampleForm(props: {
     setError(null);
     setNotice(null);
     start(async () => {
-      const res = await onSubmit(values);
+      const res = await onSubmit({
+        ...values,
+        ...(addMachine ? { machineId: "", processTypeId: "" } : { newMachine: "", newMachineP: "" }),
+        ...(addProcess || addMachine ? { processTypeId: "" } : { newProcess: "" }),
+      });
       if (!res.ok) return setError(res.error);
       if (!addAnother) return onClose();
       // SPK yang sama, warna berikutnya: pertahankan data SPK, kosongkan data warna
@@ -209,8 +231,8 @@ export function SampleForm(props: {
     });
   }
 
-  const ring = (k: SpkField | "problemDescription") => `${fieldCls} ${found.has(k as SpkField) ? "border-brand-300 bg-brand-50/50" : "border-line"}`;
-  const text = (k: Exclude<keyof SampleInput, "orderType">, placeholder?: string) => (
+  const ring = (k: SpkField | SampleTextField) => `${fieldCls} ${found.has(k as SpkField) ? "border-brand-300 bg-brand-50/50" : "border-line"}`;
+  const text = (k: SampleTextField, placeholder?: string) => (
     <input value={values[k]} onChange={(e) => set(k, e.target.value)} placeholder={placeholder} className={ring(k)} />
   );
 
@@ -305,32 +327,81 @@ export function SampleForm(props: {
               </Field>
             </FormSection>
 
-            <FormSection title="Proses & jadwal" desc="Kelompok mesin mengikuti sheet Excel; proses yang tampil hanya milik kelompok itu.">
+            <FormSection title="Proses & jadwal" desc="Pilih dari daftar, atau pilih “+ Tambah baru” bila belum ada. Data baru otomatis masuk daftar pilihan.">
               <Field fromPhoto={found.has("machineId" as SpkField)} label="Kelompok mesin (sheet)">
-                <select value={values.machineId} onChange={(e) => set("machineId", e.target.value)} className={ring("machineId")}>
-                  <option value="">Pilih kelompok mesin</option>
-                  {machines.map((m) => <option key={m.id} value={m.id}>{m.name}</option>)}
-                </select>
+                {addMachine ? (
+                  <span className="block space-y-2">
+                    <input autoFocus value={values.newMachine} onChange={(e) => set("newMachine", e.target.value)} placeholder="Nama kelompok mesin baru, mis. F. Rotary" className={`${fieldCls} border-brand-300`} />
+                    <span className="flex items-center gap-2">
+                      <span className="shrink-0 text-xs font-semibold text-ink-muted">p (hari)</span>
+                      <input inputMode="decimal" value={values.newMachineP} onChange={(e) => set("newMachineP", e.target.value)} placeholder="p (hari), mis. 1.5" aria-label="p kelompok mesin baru (hari)" className={`${fieldCls} border-brand-300`} />
+                      <BackToList onClick={() => { setAddMachine(false); setAddProcess(false); set("newMachine", ""); set("newMachineP", ""); }} />
+                    </span>
+                  </span>
+                ) : (
+                  <select value={values.machineId}
+                    onChange={(e) => {
+                      if (e.target.value === NEW) { setAddMachine(true); setAddProcess(true); set("machineId", ""); set("processTypeId", ""); }
+                      else set("machineId", e.target.value);
+                    }}
+                    className={ring("machineId")}>
+                    <option value="">Pilih kelompok mesin</option>
+                    {machines.map((m) => <option key={m.id} value={m.id}>{m.name}{m.p ? ` (p ${+m.p.toFixed(2)} hr)` : ""}</option>)}
+                    <option value={NEW}>+ Tambah kelompok mesin baru…</option>
+                  </select>
+                )}
               </Field>
               <Field fromPhoto={found.has("processTypeId" as SpkField)} label="Proses lab">
-                <select value={values.processTypeId} onChange={(e) => set("processTypeId", e.target.value)} className={ring("processTypeId")}>
-                  <option value="">{values.machineId ? "Pilih proses" : "Pilih proses (kelompok terisi otomatis)"}</option>
-                  {/* Tanpa kelompok: semua proses dikelompokkan per sheet; dengan kelompok: hanya proses milik kelompok itu */}
-                  {machines
-                    .filter((m) => !values.machineId || m.id === values.machineId)
-                    .map((m) => (
-                      <optgroup key={m.id} label={m.name}>
-                        {processTypes.filter((p) => processMachine[p.id] === m.id).map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
-                      </optgroup>
-                    ))}
-                </select>
+                {addProcess || addMachine ? (
+                  <span className="flex items-center gap-2">
+                    <input autoFocus={!addMachine} value={values.newProcess} onChange={(e) => set("newProcess", e.target.value)} placeholder="Nama proses lab baru, mis. PROOF PIGMENT" className={`${fieldCls} border-brand-300 uppercase placeholder:normal-case`} />
+                    {!addMachine && <BackToList onClick={() => { setAddProcess(false); set("newProcess", ""); }} />}
+                  </span>
+                ) : (
+                  <select value={values.processTypeId}
+                    onChange={(e) => {
+                      if (e.target.value === NEW) { setAddProcess(true); set("processTypeId", ""); }
+                      else set("processTypeId", e.target.value);
+                    }}
+                    className={ring("processTypeId")}>
+                    <option value="">{values.machineId ? "Pilih proses" : "Pilih proses (kelompok terisi otomatis)"}</option>
+                    {/* Tanpa kelompok: semua proses dikelompokkan per sheet; dengan kelompok: hanya proses milik kelompok itu */}
+                    {machines
+                      .filter((m) => !values.machineId || m.id === values.machineId)
+                      .map((m) => (
+                        <optgroup key={m.id} label={m.name}>
+                          {processTypes.filter((p) => processMachine[p.id] === m.id).map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
+                        </optgroup>
+                      ))}
+                    {values.machineId && <option value={NEW}>+ Tambah proses lab baru…</option>}
+                  </select>
+                )}
               </Field>
+              {(addMachine || addProcess) && (
+                <p className="text-xs text-ink-muted sm:col-span-2">
+                  {addMachine
+                    ? "Kelompok mesin & proses baru disimpan ke master data bersama p-nya, lalu muncul di daftar pilihan."
+                    : "Proses baru disimpan ke kelompok mesin terpilih (p mengikuti kelompok) dan muncul di daftar pilihan."}
+                </p>
+              )}
               <Field fromPhoto={found.has("receivedDate" as SpkField)} label="Tanggal terima">
                 <input type="date" value={values.receivedDate} onChange={(e) => set("receivedDate", e.target.value)} className={ring("receivedDate")} />
               </Field>
               <Field fromPhoto={found.has("dueDate" as SpkField)} label="Due date" hint={dueTouched ? undefined : "Otomatis tanggal terima + 7 hari"}>
                 <input type="date" value={values.dueDate} min={values.receivedDate} onChange={(e) => set("dueDate", e.target.value)} className={ring("dueDate")} />
               </Field>
+              {canMarkUrgent && (
+                <label className={`flex cursor-pointer items-center gap-3 rounded-xl p-3 ring-1 transition sm:col-span-2 ${values.isUrgent ? "bg-fuchsia-50 ring-fuchsia-300" : "bg-white ring-line hover:bg-canvas"}`}>
+                  <input type="checkbox" checked={values.isUrgent} onChange={(e) => set("isUrgent", e.target.checked)} className="peer sr-only" />
+                  <span aria-hidden className={`relative h-6 w-11 shrink-0 rounded-full transition peer-focus-visible:ring-4 peer-focus-visible:ring-fuchsia-200 ${values.isUrgent ? "bg-gradient-to-r from-fuchsia-600 to-pink-500" : "bg-line"}`}>
+                    <span className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-all ${values.isUrgent ? "left-[22px]" : "left-0.5"}`} />
+                  </span>
+                  <span className="text-sm">
+                    <span className={`flex items-center gap-1 font-semibold ${values.isUrgent ? "text-fuchsia-700" : "text-ink"}`}><Zap className="h-4 w-4" aria-hidden /> Tandai URGENT</span>
+                    <span className="block text-xs text-ink-muted">Sampel urgent ditaruh paling atas antrean lab dengan warna mencolok.</span>
+                  </span>
+                </label>
+              )}
             </FormSection>
 
             <FormSection title="Detail warna & kain" desc="Opsional, isi bila tercantum di SPK.">

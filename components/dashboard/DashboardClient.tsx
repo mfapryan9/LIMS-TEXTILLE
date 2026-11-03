@@ -33,9 +33,9 @@ export interface SampleEditor {
 const toInput = (r: SampleRow): SampleInput => ({
   orderType: r.orderType, orderNo: r.orderNo ?? "", orderDate: r.orderDate ?? "", spkNo: r.spkNo,
   customerName: r.customerName ?? "", motif: r.motif ?? "", colorDirection: r.colorDirection ?? "", colorCode: r.colorCode ?? "",
-  processTypeId: r.processTypeId, machineId: r.machineId,
+  processTypeId: r.processTypeId, machineId: r.machineId, newProcess: "", newMachine: "", newMachineP: "",
   fabricProblem: r.fabricProblem ?? "", problemDescription: r.problemDescription ?? "",
-  receivedDate: r.receivedDate, dueDate: r.dueDate,
+  receivedDate: r.receivedDate, dueDate: r.dueDate, isUrgent: r.isUrgent,
 });
 
 export function DashboardClient(props: {
@@ -98,8 +98,8 @@ export function DashboardClient(props: {
     return {
       orderType: user.roleCode.includes("MARKETING") ? "MARKETING" : "PRODUKSI",
       orderNo: "", orderDate: "", spkNo: "", customerName: "", motif: "", colorDirection: "", colorCode: "",
-      processTypeId: "", machineId: "", fabricProblem: "", problemDescription: "",
-      receivedDate: today, dueDate: defaultDueDate(today),
+      processTypeId: "", machineId: "", newProcess: "", newMachine: "", newMachineP: "", fabricProblem: "", problemDescription: "",
+      receivedDate: today, dueDate: defaultDueDate(today), isUrgent: false,
     };
   };
 
@@ -281,6 +281,7 @@ export function DashboardClient(props: {
           processTypes={editor.processTypes}
           processMachine={editor.processMachine}
           machines={machines}
+          canMarkUrgent={user.canMarkUrgent}
           onSubmit={(input) => (form.mode === "edit" ? editor.update(form.row.id, input) : editor.create(input))}
           onClose={() => setForm(null)}
         />

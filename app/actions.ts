@@ -153,7 +153,81 @@ function sampleData(d: SampleInput) {
   };
 }
 
+/** Error yang pesannya aman ditampilkan ke pengguna di form. */
+class FormError extends Error {}
+
+const toCode = (name: string) => name.toUpperCase().replace(/[^A-Z0-9]+/g, "_").replace(/^_|_$/g, "") || "BARU";
+
+async function uniqueCode(exists: (code: string) => Promise<boolean>, name: string) {
+  const base = toCode(name).slice(0, 40);
+  for (let i = 1; ; i++) {
+    const code = i === 1 ? base : `${base}_${i}`;
+    if (!(await exists(code))) return code;
+  }
+}
+
+/**
+ * Tentukan kelompok mesin & proses lab untuk sampel. Bila operator mengisi nama baru, data master dibuat
+ * (kelompok mesin + p, proses lab, dan pasangan proses↔kelompok) sehingga muncul di daftar pilihan berikutnya.
+ */
+async function resolveMaster(tx: Tx, userId: string, d: SampleInput): Promise<{ machineId: string; processTypeId: string }> {
+  // ── Kelompok mesin
+  let machineId = d.machineId;
+  let p: Prisma.Decimal | null = null;
+  if (!machineId) {
+    const existing = await tx.machine.findFirst({ where: { name: { equals: d.newMachine, mode: "insensitive" } } });
+    if (existing) {
+      machineId = existing.id;
+      if (!existing.isActive) await tx.machine.update({ where: { id: existing.id }, data: { isActive: true } });
+    } else {
+      const code = await uniqueCode(async (c) => !!(await tx.machine.findUnique({ where: { code: c } })), d.newMachine);
+      const m = await tx.machine.create({ data: { code, name: d.newMachine } });
+      machineId = m.id;
+      p = new Prisma.Decimal(d.newMachineP);
+      await audit(tx, userId, null, "MASTER_CREATED", "Machine", m.id, undefined, { name: d.newMachine, p: d.newMachineP });
+    }
+  }
+  if (!p) {
+    const t = await tx.masterProcessTime.findFirst({ where: { machineId } });
+    if (t) p = t.standardDays;
+    else if (d.newMachineP) p = new Prisma.Decimal(d.newMachineP);
+  }
+  const machine = await tx.machine.findUnique({ where: { id: machineId } });
+  if (!machine) throw new FormError("Kelompok mesin tidak ditemukan");
+
+  // ── Proses lab
+  let processTypeId = d.processTypeId;
+  if (!processTypeId) {
+    const existing = await tx.processType.findFirst({ where: { name: { equals: d.newProcess, mode: "insensitive" } } });
+    if (existing) {
+      processTypeId = existing.id;
+      if (!existing.isActive) await tx.processType.update({ where: { id: existing.id }, data: { isActive: true } });
+    } else {
+      const code = await uniqueCode(async (c) => !!(await tx.processType.findUnique({ where: { code: c } })), d.newProcess);
+      const pt = await tx.processType.create({ data: { code, name: d.newProcess } });
+      processTypeId = pt.id;
+      await audit(tx, userId, null, "MASTER_CREATED", "ProcessType", pt.id, undefined, { name: d.newProcess, machine: machine.name });
+    }
+  }
+
+  // ── Pasangan proses ↔ kelompok mesin (p untuk CR). Satu proses hanya milik satu kelompok mesin.
+  const times = await tx.masterProcessTime.findMany({ where: { processTypeId }, include: { machine: true, processType: true } });
+  const other = times.find((t) => t.machineId !== machineId);
+  if (other) throw new FormError(`Proses ${other.processType.name} sudah terdaftar di kelompok ${other.machine.name}. Pilih kelompok itu atau beri nama proses lain.`);
+  if (!times.length) {
+    if (!p) throw new FormError("p kelompok mesin belum ada, isi p untuk kelompok ini");
+    await tx.masterProcessTime.create({ data: { processTypeId, machineId, standardDays: p } });
+  }
+  return { machineId, processTypeId };
+}
+
+const urgentData = (urgent: boolean, userId: string) =>
+  urgent
+    ? { isUrgent: true, urgentReason: "Ditandai saat input SPK", urgentById: userId, urgentAt: new Date() }
+    : { isUrgent: false, urgentReason: null, urgentById: null, urgentAt: null };
+
 function writeError(e: unknown): SampleFormResult {
+  if (e instanceof FormError) return { ok: false, error: e.message };
   if (e instanceof Prisma.PrismaClientKnownRequestError) {
     if (e.code === "P2002") return { ok: false, error: "Kombinasi No. SPK + kode warna ini sudah terdaftar" };
     if (e.code === "P2003") return { ok: false, error: "Proses atau mesin tidak ditemukan di master data" };
@@ -168,10 +242,15 @@ export async function createSample(input: SampleInput): Promise<SampleFormResult
   const v = validateSampleInput(input);
   if ("error" in v) return { ok: false, error: v.error };
 
+  if (v.data.isUrgent && !user.canMarkUrgent) return { ok: false, error: "Anda tidak berhak menandai urgent" };
+
   try {
     await prisma.$transaction(async (tx) => {
-      const s = await tx.sample.create({ data: { ...sampleData(v.data), createdById: user.id } });
-      await audit(tx, user.id, s.id, "SAMPLE_CREATED", "Sample", s.id, undefined, v.data);
+      const master = await resolveMaster(tx, user.id, v.data);
+      const s = await tx.sample.create({
+        data: { ...sampleData({ ...v.data, ...master }), createdById: user.id, ...(v.data.isUrgent ? urgentData(true, user.id) : {}) },
+      });
+      await audit(tx, user.id, s.id, "SAMPLE_CREATED", "Sample", s.id, undefined, { ...v.data, ...master });
     });
   } catch (e) {
     return writeError(e);
@@ -190,8 +269,14 @@ export async function updateSample(sampleId: string, input: SampleInput): Promis
     await prisma.$transaction(async (tx) => {
       const before = await tx.sample.findUnique({ where: { id: sampleId } });
       if (!before) throw new Error("NOT_FOUND");
-      await tx.sample.update({ where: { id: sampleId }, data: sampleData(v.data) });
-      await audit(tx, user.id, sampleId, "SAMPLE_UPDATED", "Sample", sampleId, JSON.parse(JSON.stringify(before)), v.data);
+      const urgentChanged = before.isUrgent !== v.data.isUrgent;
+      if (urgentChanged && !user.canMarkUrgent) throw new FormError("Anda tidak berhak mengubah status urgent");
+      const master = await resolveMaster(tx, user.id, v.data);
+      await tx.sample.update({
+        where: { id: sampleId },
+        data: { ...sampleData({ ...v.data, ...master }), ...(urgentChanged ? urgentData(v.data.isUrgent, user.id) : {}) },
+      });
+      await audit(tx, user.id, sampleId, "SAMPLE_UPDATED", "Sample", sampleId, JSON.parse(JSON.stringify(before)), { ...v.data, ...master });
     });
   } catch (e) {
     if (e instanceof Error && e.message === "NOT_FOUND") return { ok: false, error: "Sampel tidak ditemukan" };
