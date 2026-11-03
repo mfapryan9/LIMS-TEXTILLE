@@ -127,7 +127,7 @@ export function DashboardClient(props: {
         </div>
         <div aria-hidden className="mx-6 h-0.5 w-10 rounded-full bg-accent" />
 
-        <p className="px-6 pb-2 pt-5 text-[11px] font-semibold uppercase tracking-wider text-accent-200">Lab Color Matching</p>
+        <p className="px-6 pb-2 pt-5 text-[11px] font-semibold uppercase tracking-wider text-accent-200">Dragon LIMS</p>
         <div role="tablist" aria-label="Menu" aria-orientation="vertical" className="space-y-1 px-3">
           {nav.map(({ key, label, icon: Icon, count }) => {
             const sel = tab === key;
@@ -177,7 +177,7 @@ export function DashboardClient(props: {
           <div className="flex min-w-0 items-center gap-3">
             <Image src="/logo-emblem.png" alt="Logo PT Nagasakti Kurnia Textile Mills" width={36} height={36} priority className="h-9 w-9 shrink-0 xl:hidden" />
             <div className="min-w-0 leading-tight">
-              <p className="hidden text-xs font-medium text-ink-soft sm:block">PT. Nagasakti Kurnia Textile Mills · LIMS</p>
+              <p className="hidden text-xs font-medium text-ink-soft sm:block">Dragon LIMS · PT. Nagasakti Kurnia Textile Mills</p>
               <p className="truncate text-sm font-semibold text-ink sm:text-base">{tab === "results" ? "Hasil uji selesai" : copy.title}</p>
             </div>
           </div>
@@ -269,7 +269,7 @@ export function DashboardClient(props: {
       <footer className="mt-6 bg-brand-600 text-brand-50">
         <div className="mx-auto flex max-w-[96rem] flex-wrap items-center justify-between gap-2 px-4 py-4 text-xs sm:px-6 xl:px-8">
           <span>© {new Date().getFullYear()} PT. Nagasakti Kurnia Textile Mills</span>
-          <span className="inline-flex items-center gap-2"><span aria-hidden className="h-1.5 w-1.5 rounded-full bg-accent" /> LIMS Lab Color Matching</span>
+          <span className="inline-flex items-center gap-2"><span aria-hidden className="h-1.5 w-1.5 rounded-full bg-accent" /> Dragon LIMS · Laboratory Information Management System</span>
         </div>
       </footer>
 
