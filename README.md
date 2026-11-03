@@ -25,10 +25,9 @@ Login memakai **username**. Password awal akun hasil seed: `lims12345` (atau `SE
 
 | Username | Tampilan | Hak |
 |---|---|---|
-| operator.lab | Operator | Tambah SPK (scan kartu), edit SPK, mulai/selesai uji ke-n |
-| kaur.lab, kasi | Kepala (approver) | Tambah & edit SPK, ACC / reject hasil uji, tab **Hasil uji selesai** |
-| ppic, marketing | Planner | Tambah & edit SPK, ubah due date, tandai urgent |
-| kalab, kepala.ppic, kepala.marketing, admin | Monitor | Hanya lihat (termasuk hasil uji selesai) |
+| operator.lab | Operator | **Satu-satunya** yang input antrean: tambah SPK (scan kartu), edit SPK & due date, tandai urgent, mulai/selesai uji ke-n |
+| kalab, kepala.produksi.df | Kepala (approver) | ACC kain yang selesai diuji, atau reject → kembali ke operator untuk uji ulang; tab **Hasil uji selesai** |
+| kaur.lab, kasi, ppic, kepala.ppic, marketing, kepala.marketing, admin | Monitor | Hanya pantau (termasuk hasil uji selesai) |
 
 Setiap sampel menampilkan berapa kali sudah diuji/matching dengan master, jumlah rework (beserta alasan terakhir),
 dan lama di lab. Sampel yang di-ACC mencatat **ACC pada uji ke-n**, tanggal ACC, approver, dan durasi sejak masuk lab

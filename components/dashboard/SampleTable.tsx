@@ -27,21 +27,33 @@ function RoleActions({ row, user, actions }: { row: SampleRow; user: SessionUser
   const [date, setDate] = useState(row.dueDate);
   const run = (fn: () => Promise<void>) => start(async () => { await fn(); setPanel(null); setText(""); });
 
-  // ── Operator Lab: jalankan uji / matching warna
+  // ── Operator Lab: jalankan uji / matching warna + kelola prioritas urgent
   if (user.viewMode === "OPERATOR") {
-    if (row.status === "MENUNGGU" || row.status === "MATCHING_ULANG")
-      return <button className={primary} disabled={pending} onClick={() => run(() => actions.startTrial(row.id))}><Play className={icon} aria-hidden />Mulai uji ke-{row.trialNo + 1}</button>;
-    if (row.status === "DALAM_PROSES" && row.openTrialId)
-      return panel === "finish" ? (
+    if (panel === "finish" && row.openTrialId)
+      return (
         <InlineForm label={`Catatan / formula uji ke-${row.trialNo}`} value={text} onChange={setText} onCancel={() => setPanel(null)}
           submit="Selesai uji" disabled={pending || !text.trim()} onSubmit={() => run(() => actions.finishTrial(row.openTrialId!, text))} />
-      ) : (
-        <button className={primary} onClick={() => setPanel("finish")}><Square className={icon} aria-hidden />Selesai uji ke-{row.trialNo}</button>
       );
-    return null;
+    const urgentBtn = user.canMarkUrgent && row.status !== "DISETUJUI" && (
+      <button className={ghost} disabled={pending}
+        onClick={() => run(() => actions.setUrgent(row.id, !row.isUrgent, row.isUrgent ? "Urgent dicabut" : "Permintaan prioritas"))}>
+        <Zap className={icon} aria-hidden />{row.isUrgent ? "Cabut urgent" : "Urgent"}
+      </button>
+    );
+    return (
+      <>
+        {(row.status === "MENUNGGU" || row.status === "MATCHING_ULANG") && (
+          <button className={primary} disabled={pending} onClick={() => run(() => actions.startTrial(row.id))}><Play className={icon} aria-hidden />Mulai uji ke-{row.trialNo + 1}</button>
+        )}
+        {row.status === "DALAM_PROSES" && row.openTrialId && (
+          <button className={primary} onClick={() => setPanel("finish")}><Square className={icon} aria-hidden />Selesai uji ke-{row.trialNo}</button>
+        )}
+        {urgentBtn}
+      </>
+    );
   }
 
-  // ── Kepala (Kaur Lab, Kasi): approve hasil uji
+  // ── Kepala Laboratorium & Kepala Produksi DF: ACC atau reject (kembali ke operator untuk diuji ulang)
   if (user.viewMode === "APPROVER") {
     if (row.status !== "MENUNGGU_APPROVAL" || !row.pendingTrialId) return null;
     return panel === "reject" ? (
@@ -52,7 +64,7 @@ function RoleActions({ row, user, actions }: { row: SampleRow; user: SessionUser
         <button className={`${btn} bg-emerald-600 text-white shadow-sm hover:bg-emerald-700`} disabled={pending} onClick={() => run(() => actions.approve(row.pendingTrialId!))}>
           <Check className={icon} aria-hidden />ACC uji ke-{row.trialNo}
         </button>
-        <button className={ghost} onClick={() => setPanel("reject")}><RotateCcw className={icon} aria-hidden />Reject (rework)</button>
+        <button className={ghost} onClick={() => setPanel("reject")}><RotateCcw className={icon} aria-hidden />Reject (uji ulang)</button>
       </>
     );
   }
@@ -85,7 +97,7 @@ function RowActions({ row, user, actions, onEdit }: { row: SampleRow; user: Sess
     <span className="flex flex-wrap items-center gap-1.5">
       <RoleActions row={row} user={user} actions={actions} />
       {canEdit && <button className={ghost} onClick={() => onEdit(row)} aria-label={`Edit SPK ${row.spkNo}`}><Pencil className={icon} aria-hidden />Edit</button>}
-      {!canEdit && user.viewMode === "MONITOR" && <span className="text-xs text-ink-soft">Hanya lihat</span>}
+      {user.viewMode === "MONITOR" && <span className="text-xs text-ink-soft">Hanya pantau</span>}
     </span>
   );
 }

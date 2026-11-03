@@ -90,9 +90,8 @@ async function main() {
   }
 
   const op = users.OPERATOR_LAB;
-  const kaur = users.KAUR_LAB;
-  const kasi = users.KASI;
-  const ppic = users.PPIC;
+  const kalab = users.KALAB; // approver: Kepala Laboratorium
+  const kadf = users.KEPALA_PRODUKSI_DF; // approver: Kepala Produksi DF
 
   // ── Riwayat selesai dari Excel (status DISETUJUI). Excel tidak mencatat jumlah percobaan → 1 uji, ACC saat TGL SELESAI.
   for (const s of excel.samples) {
@@ -101,13 +100,13 @@ async function main() {
         orderType: "PRODUKSI", orderNo: s.orderNo, orderDate: date(s.orderDate), spkNo: s.spkNo,
         processTypeId: proc[s.process], machineId: mach[s.machine],
         receivedDate: date(s.receivedDate), dueDate: date(s.dueDate), status: "DISETUJUI",
-        createdById: ppic, createdAt: wib(s.orderDate, 8),
+        createdById: op, createdAt: wib(s.orderDate, 8),
         trials: {
           create: {
             trialNo: 1, operatorId: op, status: "SELESAI",
             startedAt: wib(s.startedDate, 8), finishedAt: wib(s.finishedDate, 14),
             notes: `Data historis Excel (${s.sheet}, baris ${s.excelRow})`,
-            decision: "APPROVED", approverId: kaur, decidedAt: wib(s.finishedDate, 15),
+            decision: "APPROVED", approverId: kalab, decidedAt: wib(s.finishedDate, 15),
           },
         },
       },
@@ -133,7 +132,7 @@ async function main() {
     { machine: "THERMOSOL", process: "FIXASI (LAB)", recv: 0, due: 7, status: "MENUNGGU", newToday: true },
     { machine: "JET", process: "LEVELLING", recv: -6, due: 1, status: "MENUNGGU_APPROVAL", trials: [{}] },
     { machine: "WASHING", process: "CUCI PANAS (LAB)", recv: -2, due: 5, status: "MENUNGGU" },
-    { machine: "STENTER", process: "PROOF FINISH", recv: -7, due: 0, status: "DISETUJUI", trials: [{ decision: "REJECTED", note: "Kurang tua" }, { decision: "REJECTED", note: "Kilap berbeda" }, { decision: "APPROVED", approver: "KASI" }] },
+    { machine: "STENTER", process: "PROOF FINISH", recv: -7, due: 0, status: "DISETUJUI", trials: [{ decision: "REJECTED", note: "Kurang tua" }, { decision: "REJECTED", note: "Kilap berbeda" }, { decision: "APPROVED", approver: "KADF" }] },
     { machine: "CPB", process: "TOPPING REAKTIF", recv: -5, due: 2, status: "DISETUJUI", trials: [{ decision: "REJECTED", note: "Shade terlalu muda" }, { decision: "APPROVED" }], color: "CM-311" },
   ];
 
@@ -148,8 +147,8 @@ async function main() {
         spkNo: `26039${String(n).padStart(2, "0")}`, customerName: e.customer ?? null, colorCode: e.color ?? null,
         processTypeId: proc[e.process], machineId: mach[e.machine],
         receivedDate: date(received), dueDate: date(day(e.due)), status: e.status,
-        createdById: ppic, createdAt: e.newToday ? new Date() : wib(received, 8),
-        ...(e.urgent ? { isUrgent: true, urgentReason: "Permintaan prioritas customer", urgentById: ppic, urgentAt: new Date() } : {}),
+        createdById: op, createdAt: e.newToday ? new Date() : wib(received, 8),
+        ...(e.urgent ? { isUrgent: true, urgentReason: "Permintaan prioritas customer", urgentById: op, urgentAt: new Date() } : {}),
         trials: {
           // Uji ke-i dijadwalkan berurutan sejak tanggal terima (maks. sampai hari ini)
           create: trials.map((t, i) => {
@@ -163,7 +162,7 @@ async function main() {
               finishedAt: finished ? wib(startDay, 13) : null,
               notes: finished ? `Formula uji ke-${i + 1}` : null,
               decision: t.decision ?? "PENDING",
-              approverId: decided ? (t.approver === "KASI" ? kasi : kaur) : null,
+              approverId: decided ? (t.approver === "KADF" ? kadf : kalab) : null,
               decidedAt: decided ? wib(startDay, 15) : null,
               rejectNote: t.decision === "REJECTED" ? t.note ?? null : null,
             } as const;

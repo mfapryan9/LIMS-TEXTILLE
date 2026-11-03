@@ -16,7 +16,7 @@ import { fmtDate, SampleTable, type SampleActions } from "./SampleTable";
 
 const VIEW_COPY: Record<ViewMode, { title: string; hint: string }> = {
   OPERATOR: { title: "Antrean kerja lab", hint: "Kerjakan dari atas ke bawah: sampel URGENT paling atas, lalu Critical Ratio terkecil." },
-  APPROVER: { title: "Menunggu approval", hint: "ACC hasil matching warna atau kirim kembali untuk rework. Tambah dan edit SPK juga tersedia." },
+  APPROVER: { title: "Menunggu approval", hint: "ACC kain yang selesai diuji di lab, atau reject agar operator mengulang uji. Input & edit SPK hanya oleh operator." },
   PLANNER: { title: "Kesiapan sampel", hint: "Tambah SPK, pantau kesiapan, ubah due date, atau tandai sampel urgent." },
   MONITOR: { title: "Monitoring sampel", hint: "Tampilan hanya-lihat untuk seluruh antrean lab." },
 };

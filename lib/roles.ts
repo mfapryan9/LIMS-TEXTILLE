@@ -15,15 +15,21 @@ export interface SessionUser {
   notificationsSeenAt: string | null;
 }
 
-/** Seed untuk tabel roles. "Kepala" (Kaur Lab & Kasi) = approver; Operator & Kepala bisa tambah (scan) / edit SPK. */
+/**
+ * Seed untuk tabel roles.
+ * - Operator Lab: satu-satunya yang mengelola data (tambah/scan & edit SPK, due date, urgent) dan menjalankan uji.
+ * - Kepala Laboratorium & Kepala Produksi DF: ACC hasil uji, atau reject → kembali ke operator untuk diuji ulang.
+ * - Selain itu: hanya memantau.
+ */
 export const ROLE_SEED = [
-  { code: "OPERATOR_LAB", name: "Operator Lab", viewMode: "OPERATOR", canEditSample: true },
-  { code: "KAUR_LAB", name: "Kepala Urusan Laboratorium", viewMode: "APPROVER", canApprove: true, canEditSample: true, canManageMaster: true },
-  { code: "KASI", name: "Kepala Seksi", viewMode: "APPROVER", canApprove: true, canEditSample: true },
-  { code: "KALAB", name: "Kepala Laboratorium", viewMode: "MONITOR" },
-  { code: "PPIC", name: "PPIC", viewMode: "PLANNER", canEditDue: true, canMarkUrgent: true, canEditSample: true },
+  { code: "OPERATOR_LAB", name: "Operator Lab", viewMode: "OPERATOR", canEditSample: true, canEditDue: true, canMarkUrgent: true },
+  { code: "KALAB", name: "Kepala Laboratorium", viewMode: "APPROVER", canApprove: true },
+  { code: "KEPALA_PRODUKSI_DF", name: "Kepala Produksi DF", viewMode: "APPROVER", canApprove: true },
+  { code: "KAUR_LAB", name: "Kepala Urusan Laboratorium", viewMode: "MONITOR" },
+  { code: "KASI", name: "Kepala Seksi", viewMode: "MONITOR" },
+  { code: "PPIC", name: "PPIC", viewMode: "MONITOR" },
   { code: "KEPALA_PPIC", name: "Kepala PPIC", viewMode: "MONITOR" },
-  { code: "MARKETING", name: "Marketing", viewMode: "PLANNER", canEditDue: true, canMarkUrgent: true, canEditSample: true },
+  { code: "MARKETING", name: "Marketing", viewMode: "MONITOR" },
   { code: "KEPALA_MARKETING", name: "Kepala Marketing", viewMode: "MONITOR" },
   { code: "ADMIN", name: "Admin Sistem", viewMode: "MONITOR", canManageMaster: true },
 ] as const;
