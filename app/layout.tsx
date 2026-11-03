@@ -5,8 +5,8 @@ import './globals.css';
 const sans = Plus_Jakarta_Sans({ subsets: ['latin'], display: 'swap', variable: '--font-sans' });
 
 export const metadata = {
-  title: 'Dragon LIMS · PT. Nagasakti Kurnia Textile Mills',
-  description: 'Dragon LIMS (Laboratory Information Management System) untuk pengujian sampel warna kain PT. Nagasakti Kurnia Textile Mills',
+  title: 'DyeLIMS · PT. Nagasakti Kurnia Textile Mills',
+  description: 'DyeLIMS (Laboratory Information Management System) untuk pengujian sampel warna kain PT. Nagasakti Kurnia Textile Mills',
 };
 
 export default function RootLayout({

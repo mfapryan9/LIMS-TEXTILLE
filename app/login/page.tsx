@@ -12,11 +12,11 @@ const FEATURES = [
   { icon: CheckCircle2, title: "Riwayat Uji & ACC", text: "Lihat uji ke berapa yang di-ACC dan durasinya di lab." },
 ];
 
-/** Wordmark nama aplikasi: "DRAGON" putih/marun, "LIMS" emas. */
+/** Wordmark nama aplikasi: "Dye" putih/marun, "LIMS" emas. */
 function Wordmark({ light = false, className = "" }: { light?: boolean; className?: string }) {
   return (
-    <span className={`font-extrabold uppercase tracking-[0.08em] ${className}`}>
-      <span className={light ? "text-white" : "text-brand-700"}>Dragon</span>{" "}
+    <span className={`font-extrabold tracking-tight ${className}`}>
+      <span className={light ? "text-white" : "text-brand-700"}>Dye</span>
       <span className={light ? "text-accent-200" : "text-accent-600"}>LIMS</span>
     </span>
   );
@@ -66,7 +66,7 @@ export default async function LoginPage() {
           </ul>
         </div>
 
-        <p className="relative text-xs text-brand-200/70">© {new Date().getFullYear()} Dragon LIMS · PT. Nagasakti Kurnia Textile Mills</p>
+        <p className="relative text-xs text-brand-200/70">© {new Date().getFullYear()} DyeLIMS · PT. Nagasakti Kurnia Textile Mills</p>
       </section>
 
       {/* Form */}
