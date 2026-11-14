@@ -1,11 +1,11 @@
 import { prisma } from "@/lib/prisma";
 import { getSessionUser } from "@/lib/auth";
-import { ACTIVE_STATUSES, buildStandardTimeMap, calculateCR, dateOnlyDayNumber, jakartaDayNumber, sortByPriority, withCR } from "@/lib/cr";
+import { buildStandardTimeMap, calculateCR, dateOnlyDayNumber, jakartaDayNumber, sortByPriority, withCR } from "@/lib/cr";
 import { deriveNotifications } from "@/lib/roles";
 import { DashboardClient } from "@/components/dashboard/DashboardClient";
 import type { SampleRow } from "@/components/dashboard/badges";
 import { changeOwnPassword, createUser, resetUserPassword, updateUser } from "@/app/user-actions";
-import { approve, changeDueDate, createSample, finishTrial, markNotificationsSeen, reject, setUrgent, startTrial, updateSample } from "@/app/actions";
+import { cancelUrgent, createSample, finishProcess, markNotificationsSeen, startProcess, updateSample } from "@/app/actions";
 import { logout } from "@/app/login/actions";
 
 export const dynamic = "force-dynamic"; // CR bergantung pada tanggal hari ini → jangan di-cache statis
@@ -23,6 +23,7 @@ export default async function DashboardPage() {
         processType: true,
         machine: true,
         trials: { orderBy: { trialNo: "asc" }, include: { approver: { select: { name: true } } } },
+        resultPhoto: { select: { id: true } }, // hanya penanda ada foto; gambarnya diambil lewat /hasil/[id]
       },
     }),
     prisma.masterProcessTime.findMany(),
@@ -34,7 +35,7 @@ export default async function DashboardPage() {
   const [users, roles] = user.canManageUsers
     ? await Promise.all([
         prisma.user.findMany({ select: { id: true, username: true, name: true, roleId: true, isActive: true, createdAt: true } }),
-        prisma.role.findMany({ orderBy: { name: "asc" }, select: { id: true, code: true, name: true, viewMode: true, canApprove: true, canEditSample: true, canManageUsers: true } }),
+        prisma.role.findMany({ orderBy: { name: "asc" }, select: { id: true, code: true, name: true, viewMode: true, canApprove: true, canEditSample: true, canManageUsers: true, canInterveneUrgent: true } }),
       ])
     : [[], []];
 
@@ -55,7 +56,7 @@ export default async function DashboardPage() {
     const firstStart = s.trials[0]?.startedAt;
     // Masuk lab = tanggal terima, atau mulai uji pertama bila tercatat lebih awal (ada di data Excel)
     const labStart = Math.min(dateOnlyDayNumber(s.receivedDate), firstStart ? jakartaDayNumber(firstStart) : Infinity);
-    const labEnd = approved?.decidedAt ? jakartaDayNumber(approved.decidedAt) : today;
+    const labEnd = s.completedAt ? jakartaDayNumber(s.completedAt) : approved?.decidedAt ? jakartaDayNumber(approved.decidedAt) : today;
     const orderDate = s.orderDate ? iso(s.orderDate) : null;
 
     return {
@@ -66,6 +67,9 @@ export default async function DashboardPage() {
       fabricProblem: s.fabricProblem, problemDescription: s.problemDescription,
       receivedDate: s.receivedDate, dueDate: s.dueDate,
       status: s.status, isUrgent: s.isUrgent,
+      createdAt: s.createdAt.toISOString(), urgentAt: s.urgentAt?.toISOString() ?? null,
+      processorName: s.processorName, processStartedAt: s.processStartedAt?.toISOString() ?? null,
+      completedAt: s.completedAt?.toISOString() ?? null, resultNote: s.resultNote, hasPhoto: !!s.resultPhoto,
       trialNo: last?.trialNo ?? 0,
       rejectedCount: s.trials.filter((t) => t.decision === "REJECTED").length,
       lastRejectNote: [...s.trials].reverse().find((t) => t.rejectNote)?.rejectNote ?? null,
@@ -84,10 +88,8 @@ export default async function DashboardPage() {
     };
   });
 
-  const notifs = deriveNotifications(
-    enriched.filter((s) => ACTIVE_STATUSES.includes(s.status)),
-    user.notificationsSeenAt,
-  );
+  // Notifikasi berbeda per peran: lab (pengajuan masuk & urgent), PPIC (pengajuan selesai), kepala (urgent)
+  const notifs = deriveNotifications(rows, user.roleCode, user.notificationsSeenAt);
 
   return (
     <DashboardClient
@@ -105,7 +107,7 @@ export default async function DashboardPage() {
           processes: processTypes.filter((p) => own.some((t) => t.processTypeId === p.id)).map((p) => p.name),
         };
       })}
-      actions={{ startTrial, finishTrial, approve, reject, changeDueDate, setUrgent, markNotificationsSeen }}
+      actions={{ startProcess, finishProcess, cancelUrgent, markNotificationsSeen }}
       editor={{
         processTypes: processTypes.map((p) => ({ id: p.id, name: p.name })),
         processMachine: Object.fromEntries(times.map((t) => [t.processTypeId, t.machineId])),

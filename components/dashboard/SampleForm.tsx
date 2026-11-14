@@ -227,7 +227,7 @@ export function SampleForm(props: {
       // SPK yang sama, warna berikutnya: pertahankan data SPK, kosongkan data warna
       setValues((v) => ({ ...v, colorCode: "", colorDirection: "" }));
       setFound((f) => new Set(Array.from(f).filter((k) => k !== "colorCode" && k !== "colorDirection")));
-      setNotice(`Tersimpan: SPK ${values.spkNo}${values.colorCode ? ` · ${values.colorCode}` : ""}. Lanjutkan isi warna berikutnya.`);
+      setNotice(`Terkirim: order ${values.orderNo}${values.colorCode ? ` · ${values.colorCode}` : ""}. Lanjutkan isi CM warna berikutnya.`);
     });
   }
 
@@ -237,7 +237,7 @@ export function SampleForm(props: {
   );
 
   return (
-    <div className="fixed inset-0 z-40 flex items-end justify-center bg-ink/40 p-0 backdrop-blur-sm sm:items-center sm:p-4" role="dialog" aria-modal="true" aria-label={mode === "create" ? "Tambah SPK" : "Edit SPK"}>
+    <div className="fixed inset-0 z-40 flex items-end justify-center bg-ink/40 p-0 backdrop-blur-sm sm:items-center sm:p-4" role="dialog" aria-modal="true" aria-label={mode === "create" ? "Ajukan ke Lab" : "Edit pengajuan"}>
       <div className="flex max-h-[100dvh] w-full max-w-5xl animate-fade-up flex-col overflow-hidden bg-white shadow-soft sm:max-h-[92vh] sm:rounded-3xl">
         <div className="flex items-center justify-between gap-4 border-b border-line px-6 py-4">
           <div className="flex items-center gap-3">
@@ -245,8 +245,8 @@ export function SampleForm(props: {
               {mode === "create" ? <ScanLine className="h-5 w-5" aria-hidden /> : <Pencil className="h-5 w-5" aria-hidden />}
             </span>
             <div>
-              <h2 className="text-lg font-bold text-ink">{mode === "create" ? "Tambah SPK" : `Edit SPK ${props.initial.spkNo}`}</h2>
-              <p className="text-xs text-ink-muted">{mode === "create" ? "Foto kartu SPK untuk mengisi otomatis, lalu periksa dan edit hasilnya." : "Perbaiki data SPK. Perubahan dicatat di audit log."}</p>
+              <h2 className="text-lg font-bold text-ink">{mode === "create" ? "Ajukan ke Lab" : `Edit pengajuan order ${props.initial.orderNo || props.initial.spkNo}`}</h2>
+              <p className="text-xs text-ink-muted">{mode === "create" ? "Isi data pengajuan atau foto kartu SPK untuk mengisi otomatis, lalu periksa sebelum mengirim." : "Pengajuan hanya dapat diubah selama belum diproses lab. Perubahan dicatat di audit log."}</p>
             </div>
           </div>
           <button type="button" onClick={onClose} className="rounded-xl p-2 text-ink-soft transition hover:bg-canvas hover:text-ink" aria-label="Tutup">
@@ -313,20 +313,11 @@ export function SampleForm(props: {
             )}
             {error && <p role="alert" className="rounded-xl bg-rose-50 px-3.5 py-2.5 text-sm text-rose-700 ring-1 ring-rose-200">{error}</p>}
 
-            <FormSection title="Identitas SPK">
-              <Field fromPhoto={found.has("spkNo" as SpkField)} label="No. SPK">{text("spkNo", "mis. 2602108")}</Field>
-              <Field fromPhoto={found.has("orderType" as SpkField)} label="Jenis order">
-                <select value={values.orderType} onChange={(e) => set("orderType", e.target.value as SampleInput["orderType"])} className={ring("orderType")}>
-                  <option value="PRODUKSI">Produksi</option>
-                  <option value="MARKETING">Marketing</option>
-                </select>
-              </Field>
-              <Field fromPhoto={found.has("orderNo" as SpkField)} label="No. order (opsional)">{text("orderNo", "mis. 26-3012")}</Field>
-              <Field fromPhoto={found.has("orderDate" as SpkField)} label="Tanggal order (opsional)">
-                <input type="date" value={values.orderDate} onChange={(e) => set("orderDate", e.target.value)} className={ring("orderDate")} />
-              </Field>
+            <FormSection title="Data order" desc="No. Order dan CM warna wajib diisi.">
+              <Field fromPhoto={found.has("orderNo" as SpkField)} label="No. Order">{text("orderNo", "mis. 26-3012")}</Field>
+              <Field fromPhoto={found.has("colorCode" as SpkField)} label="CM warna">{text("colorCode", "mis. CM-102")}</Field>
+              <Field fromPhoto={found.has("motif" as SpkField)} label="Motif (opsional)">{text("motif", "mis. polos / batik")}</Field>
             </FormSection>
-
             <FormSection title="Proses & jadwal" desc="Pilih dari daftar, atau pilih “+ Tambah baru” bila belum ada. Data baru otomatis masuk daftar pilihan.">
               <Field fromPhoto={found.has("machineId" as SpkField)} label="Kelompok mesin (sheet)">
                 {addMachine ? (
@@ -384,10 +375,7 @@ export function SampleForm(props: {
                     : "Proses baru disimpan ke kelompok mesin terpilih (p mengikuti kelompok) dan muncul di daftar pilihan."}
                 </p>
               )}
-              <Field fromPhoto={found.has("receivedDate" as SpkField)} label="Tanggal terima">
-                <input type="date" value={values.receivedDate} onChange={(e) => set("receivedDate", e.target.value)} className={ring("receivedDate")} />
-              </Field>
-              <Field fromPhoto={found.has("dueDate" as SpkField)} label="Due date" hint={dueTouched ? undefined : "Otomatis tanggal terima + 7 hari"}>
+              <Field fromPhoto={found.has("dueDate" as SpkField)} label="Due date" hint={dueTouched ? undefined : "Otomatis hari ini + 7 hari, dapat diubah"}>
                 <input type="date" value={values.dueDate} min={values.receivedDate} onChange={(e) => set("dueDate", e.target.value)} className={ring("dueDate")} />
               </Field>
               {canMarkUrgent && (
@@ -398,19 +386,19 @@ export function SampleForm(props: {
                   </span>
                   <span className="text-sm">
                     <span className={`flex items-center gap-1 font-semibold ${values.isUrgent ? "text-fuchsia-700" : "text-ink"}`}><Zap className="h-4 w-4" aria-hidden /> Tandai URGENT</span>
-                    <span className="block text-xs text-ink-muted">Sampel urgent ditaruh paling atas antrean lab dengan warna mencolok.</span>
+                    <span className="block text-xs text-ink-muted">Langsung paling atas di antrean lab dan notifikasi dikirim ke Kepala PPIC & Kepala Produksi DF.</span>
                   </span>
                 </label>
               )}
             </FormSection>
 
-            <FormSection title="Detail warna & kain" desc="Opsional, isi bila tercantum di SPK.">
-              <Field fromPhoto={found.has("customerName" as SpkField)} label="Customer">{text("customerName", "PT …")}</Field>
-              <Field fromPhoto={found.has("motif" as SpkField)} label="Motif">{text("motif")}</Field>
-              <Field fromPhoto={found.has("colorCode" as SpkField)} label="Kode warna">{text("colorCode", "CM-102")}</Field>
-              <Field fromPhoto={found.has("colorDirection" as SpkField)} label="Arah warna">{text("colorDirection", "mis. lebih biru")}</Field>
-              <Field fromPhoto={found.has("fabricProblem" as SpkField)} label="Problem kain">{text("fabricProblem", "mis. belang")}</Field>
-              <Field fromPhoto={found.has("problemDescription" as SpkField)} label="Keterangan problem">{text("problemDescription")}</Field>
+            <FormSection title="Deskripsi" desc="Keterangan tambahan untuk lab.">
+              <Field fromPhoto={found.has("problemDescription" as SpkField)} label="Deskripsi order">
+                <textarea value={values.problemDescription} onChange={(e) => set("problemDescription", e.target.value)} rows={3} maxLength={1000} placeholder="mis. kebutuhan buyer, jumlah kain, catatan khusus" className={ring("problemDescription")} />
+              </Field>
+              <Field fromPhoto={found.has("colorDirection" as SpkField)} label="Deskripsi warna">
+                <textarea value={values.colorDirection} onChange={(e) => set("colorDirection", e.target.value)} rows={3} maxLength={200} placeholder="mis. lebih biru dari standar, tone hangat" className={ring("colorDirection")} />
+              </Field>
             </FormSection>
           </section>
         </div>
@@ -419,12 +407,12 @@ export function SampleForm(props: {
           <button type="button" onClick={onClose} className={ghostBtn}>Batal</button>
           {mode === "create" && (
             <button type="button" disabled={pending || ocr.state === "running"} onClick={() => submit(true)} className={ghostBtn}>
-              <Plus className="h-4 w-4" aria-hidden /> Simpan &amp; tambah warna lain
+              <Plus className="h-4 w-4" aria-hidden /> Kirim &amp; ajukan warna lain
             </button>
           )}
           <button type="button" disabled={pending || ocr.state === "running"} onClick={() => submit(false)} className={primaryBtn}>
             {pending ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden /> : <Check className="h-4 w-4" aria-hidden />}
-            {pending ? "Menyimpan…" : mode === "create" ? "Simpan SPK" : "Simpan perubahan"}
+            {pending ? "Mengirim…" : mode === "create" ? "Kirim pengajuan" : "Simpan perubahan"}
           </button>
         </div>
       </div>

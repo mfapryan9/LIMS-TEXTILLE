@@ -22,6 +22,13 @@ export type SampleRow = {
   dueDate: string; // YYYY-MM-DD
   status: SampleStatusKey;
   isUrgent: boolean;
+  createdAt: string; // ISO, waktu pengajuan dibuat
+  urgentAt: string | null; // ISO
+  processorName: string | null; // nama operator yang memproses (Sprint 3)
+  processStartedAt: string | null; // ISO
+  completedAt: string | null; // ISO, selesai + foto hasil uji
+  resultNote: string | null; // catatan / resep dari operator
+  hasPhoto: boolean; // ada foto lampiran hasil uji
   trialNo: number; // jumlah uji / matching warna dengan master (0 = belum pernah)
   rejectedCount: number; // berapa kali ditolak (rework)
   lastRejectNote: string | null; // alasan rework terakhir, untuk operator
@@ -69,10 +76,10 @@ export function MachineChip({ name, color }: { name: string; color: number }) {
 }
 
 export const STATUS_LABEL: Record<SampleStatusKey, string> = {
-  MENUNGGU: "Menunggu",
-  DALAM_PROSES: "Dalam proses",
+  MENUNGGU: "Pengajuan masuk",
+  DALAM_PROSES: "Sedang diproses",
   MENUNGGU_APPROVAL: "Menunggu approval",
-  DISETUJUI: "Disetujui (ACC)",
+  DISETUJUI: "Selesai",
   MATCHING_ULANG: "Matching ulang",
 };
 

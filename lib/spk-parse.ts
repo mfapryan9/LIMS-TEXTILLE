@@ -20,6 +20,7 @@ export interface SpkDraft {
   processTypeId?: string;
   machineId?: string;
   fabricProblem?: string;
+  problemDescription?: string; // Sprint 3: deskripsi order
   receivedDate?: string; // YYYY-MM-DD
   dueDate?: string; // YYYY-MM-DD
 }
@@ -42,8 +43,10 @@ const LABELS: [LabelTarget, string[]][] = [
   ["ignore", ["tanggal mulai", "tgl. mulai", "tgl mulai", "tanggal selesai", "tgl. selesai", "tgl selesai", "duration", "durasi", "overdue", "critical ratio", "processing time"]],
   ["spkNo", ["nomor spk", "no. spk", "no.spk", "no spk", "spk no", "spk"]],
   ["customerName", ["nama customer", "nama pelanggan", "customer", "pelanggan", "buyer", "konsumen"]],
-  ["colorDirection", ["arah warna", "color direction", "arah"]],
-  ["colorCode", ["kode warna", "color code", "kode cm", "no. warna", "no warna", "warna"]],
+  // Sprint 3: "Deskripsi warna" disimpan di kolom arah warna, "Deskripsi order" di keterangan problem
+  ["colorDirection", ["deskripsi warna", "keterangan warna", "arah warna", "color direction", "arah"]],
+  ["problemDescription", ["deskripsi order", "keterangan order", "deskripsi", "keterangan", "description"]],
+  ["colorCode", ["cm warna", "kode warna", "color code", "kode cm", "no. warna", "no warna", "warna"]],
   ["motif", ["motif", "desain", "design", "corak"]],
   ["process", ["jenis proses", "proses lab", "proses", "process"]],
   ["machine", ["mesin", "machine"]],

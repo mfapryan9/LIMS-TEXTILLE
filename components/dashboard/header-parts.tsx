@@ -1,25 +1,19 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Bell, CheckCheck, CheckCircle2, ClipboardCheck, FlaskConical, Hourglass, Layers, RotateCcw, Search, type LucideIcon } from "lucide-react";
+import { Bell, CheckCheck, CheckCircle2, FlaskConical, Inbox, Layers, RotateCcw, Search, type LucideIcon } from "lucide-react";
 import type { Notif, NotifType } from "@/lib/roles";
 import { machineTone, STATUS_LABEL, type SampleRow } from "./badges";
 import type { SampleStatusKey } from "@/lib/cr";
 
 /* ───────── Notifikasi di header (FR-10) ───────── */
 
-const NOTIF_LABEL: Record<NotifType, string> = {
-  LATE: "Terlambat",
-  URGENT: "Urgent",
-  NEAR_DEADLINE: "Mendekati deadline",
-  NEW: "Baru masuk",
-};
-const NOTIF_DOT: Record<NotifType, string> = {
-  LATE: "bg-rose-500",
-  URGENT: "bg-fuchsia-500",
-  NEAR_DEADLINE: "bg-amber-400",
-  NEW: "bg-brand-500",
-};
+/** Notifikasi dipisah per jenis; tiap peran hanya menerima jenis yang relevan (lihat deriveNotifications). */
+const NOTIF_GROUPS: { type: NotifType; label: string; dot: string }[] = [
+  { type: "URGENT", label: "Pengajuan urgent", dot: "bg-fuchsia-500" },
+  { type: "INCOMING", label: "Pengajuan masuk", dot: "bg-brand-500" },
+  { type: "DONE", label: "Pengajuan selesai", dot: "bg-emerald-500" },
+];
 
 export function NotificationBell({
   notifs,
@@ -70,31 +64,43 @@ export function NotificationBell({
               <CheckCheck className="h-3.5 w-3.5" aria-hidden /> Tandai sudah dibaca
             </button>
           </div>
-          <ul className="max-h-96 divide-y divide-line overflow-auto border-t border-line">
-            {notifs.length === 0 && <li className="px-4 py-8 text-center text-sm text-ink-soft">Tidak ada yang perlu perhatian saat ini.</li>}
-            {notifs.map((n) => (
-              <li key={n.key}>
-                <button
-                  type="button"
-                  onClick={() => {
-                    onOpenSample(n.sampleId);
-                    setOpen(false);
-                  }}
-                  className={`flex w-full gap-3 px-4 py-3 text-left transition hover:bg-canvas ${n.unread ? "bg-brand-50/40" : ""}`}
-                >
-                  <span className={`mt-1.5 h-2 w-2 shrink-0 rounded-full ${NOTIF_DOT[n.type]}`} aria-hidden />
-                  <span className="min-w-0">
-                    <span className="block text-sm font-semibold">
-                      {n.title} {n.unread && <span className="sr-only">(belum dibaca)</span>}
-                    </span>
-                    <span className="block truncate text-xs text-ink-soft">
-                      {NOTIF_LABEL[n.type]} · {n.detail}
-                    </span>
-                  </span>
-                </button>
-              </li>
-            ))}
-          </ul>
+          <div className="max-h-96 overflow-auto border-t border-line">
+            {notifs.length === 0 && <p className="px-4 py-8 text-center text-sm text-ink-soft">Tidak ada notifikasi saat ini.</p>}
+            {NOTIF_GROUPS.map(({ type, label, dot }) => {
+              const list = notifs.filter((n) => n.type === type);
+              if (!list.length) return null;
+              return (
+                <section key={type} aria-label={label}>
+                  <p className="sticky top-0 flex items-center gap-2 bg-surface/95 px-4 py-1.5 text-[11px] font-bold uppercase tracking-wider text-ink-muted backdrop-blur">
+                    <span className={`h-2 w-2 rounded-full ${dot}`} aria-hidden /> {label}
+                    <span className="ml-auto rounded-full bg-white px-1.5 text-[10px] tabular-nums ring-1 ring-line">{list.length}</span>
+                  </p>
+                  <ul className="divide-y divide-line">
+                    {list.map((n) => (
+                      <li key={n.key}>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            onOpenSample(n.sampleId);
+                            setOpen(false);
+                          }}
+                          className={`flex w-full gap-3 px-4 py-3 text-left transition hover:bg-canvas ${n.unread ? "bg-brand-50/40" : ""}`}
+                        >
+                          <span className={`mt-1.5 h-2 w-2 shrink-0 rounded-full ${n.unread ? dot : "bg-line"}`} aria-hidden />
+                          <span className="min-w-0">
+                            <span className="block text-sm font-semibold">
+                              {n.title} {n.unread && <span className="sr-only">(belum dibaca)</span>}
+                            </span>
+                            <span className="block truncate text-xs text-ink-soft">{n.detail}</span>
+                          </span>
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                </section>
+              );
+            })}
+          </div>
         </div>
       )}
     </div>
@@ -104,12 +110,10 @@ export function NotificationBell({
 /* ───────── Ringkasan status (FR-13) ───────── */
 
 const STATS: { key: SampleStatusKey | "ALL"; label: string; icon: LucideIcon; tone: string }[] = [
-  { key: "ALL", label: "Semua sampel", icon: Layers, tone: "bg-brand-50 text-brand-700" },
-  { key: "MENUNGGU", label: "Menunggu", icon: Hourglass, tone: "bg-slate-100 text-slate-600" },
-  { key: "DALAM_PROSES", label: "Dalam proses", icon: FlaskConical, tone: "bg-sky-50 text-sky-600" },
-  { key: "MENUNGGU_APPROVAL", label: STATUS_LABEL.MENUNGGU_APPROVAL, icon: ClipboardCheck, tone: "bg-violet-50 text-violet-600" },
+  { key: "ALL", label: "Semua pengajuan", icon: Layers, tone: "bg-brand-50 text-brand-700" },
+  { key: "MENUNGGU", label: STATUS_LABEL.MENUNGGU, icon: Inbox, tone: "bg-slate-100 text-slate-600" },
+  { key: "DALAM_PROSES", label: STATUS_LABEL.DALAM_PROSES, icon: FlaskConical, tone: "bg-sky-50 text-sky-600" },
   { key: "DISETUJUI", label: STATUS_LABEL.DISETUJUI, icon: CheckCircle2, tone: "bg-emerald-50 text-emerald-600" },
-  { key: "MATCHING_ULANG", label: "Rework", icon: RotateCcw, tone: "bg-orange-50 text-orange-600" },
 ];
 
 export function StatsStrip({
@@ -123,7 +127,7 @@ export function StatsStrip({
 }) {
   const count = (s: SampleStatusKey | "ALL") => (s === "ALL" ? rows.length : rows.filter((r) => r.status === s).length);
   return (
-    <section aria-label="Ringkasan status" className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-6">
+    <section aria-label="Ringkasan status" className="grid grid-cols-2 gap-3 lg:grid-cols-4">
       {STATS.map(({ key, label, icon: Icon, tone }) => {
         const selected = active === key;
         return (
@@ -170,7 +174,7 @@ export function applyFilters(rows: SampleRow[], f: Filters): SampleRow[] {
     if (f.machineId !== "ALL" && r.machineId !== f.machineId) return false;
     if (f.urgency === "URGENT" && !r.isUrgent) return false;
     if ((f.urgency === "LATE" || f.urgency === "WARNING") && r.urgency !== f.urgency) return false;
-    if (q && ![r.spkNo, r.orderNo, r.processName, r.customerName, r.motif, r.colorCode, r.colorDirection].some((v) => v?.toLowerCase().includes(q))) return false;
+    if (q && ![r.spkNo, r.orderNo, r.processName, r.machineName, r.motif, r.colorCode, r.colorDirection, r.problemDescription, r.processorName].some((v) => v?.toLowerCase().includes(q))) return false;
     return true; // urutan CR dipertahankan dari server (sortByPriority)
   });
 }
@@ -188,8 +192,8 @@ export function FilterBar({ value, onChange }: { value: Filters; onChange: (f: F
           type="search"
           value={value.q}
           onChange={(e) => set("q", e.target.value)}
-          placeholder="Cari SPK, no. order, proses, customer, kode warna"
-          aria-label="Cari sampel"
+          placeholder="Cari no. order, CM warna, motif, proses, pemroses"
+          aria-label="Cari pengajuan"
           className={`${fieldCls} w-full pl-10`}
         />
       </span>
@@ -198,11 +202,6 @@ export function FilterBar({ value, onChange }: { value: Filters; onChange: (f: F
         <option value="LATE">Terlambat</option>
         <option value="WARNING">Mendesak</option>
         <option value="URGENT">Ditandai urgent</option>
-      </select>
-      <select aria-label="Jenis order" value={value.orderType} onChange={(e) => set("orderType", e.target.value as Filters["orderType"])} className={fieldCls}>
-        <option value="ALL">Produksi & Marketing</option>
-        <option value="PRODUKSI">Produksi</option>
-        <option value="MARKETING">Marketing</option>
       </select>
       {/* Kelompok mesin dipilih lewat tab sheet di atas; reset tetap mengembalikan ke "Semua kelompok" */}
       <button type="button" onClick={() => onChange(DEFAULT_FILTERS)} className="inline-flex items-center gap-1.5 rounded-xl px-3 py-2.5 text-sm font-semibold text-brand-700 transition hover:bg-brand-50">

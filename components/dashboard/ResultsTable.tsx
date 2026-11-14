@@ -4,7 +4,7 @@ import { useMemo, useState } from "react";
 import { BadgeCheck, CheckCircle2, FlaskConical, Inbox, Search, Target, Timer, type LucideIcon } from "lucide-react";
 import { fmtDays, MachineChip, machineTone, type SampleRow } from "./badges";
 import { fieldCls, type MachineGroup } from "./header-parts";
-import { fmtDate } from "./SampleTable";
+import { fmtDate, fmtStamp, PhotoLink } from "./SampleTable";
 
 /** Hasil uji yang sudah di-ACC: jumlah uji, ACC di uji ke berapa, durasi dari masuk lab, CR saat order (sama dengan Excel). */
 export function ResultsTable({ rows, groups }: { rows: SampleRow[]; groups: MachineGroup[] }) {
@@ -23,7 +23,7 @@ export function ResultsTable({ rows, groups }: { rows: SampleRow[]; groups: Mach
     const s = q.trim().toLowerCase();
     if (!s) return done;
     return done.filter((r) =>
-      [r.spkNo, r.orderNo, r.processName, r.machineName, r.customerName, r.colorCode, r.approverName].some((v) => v?.toLowerCase().includes(s)),
+      [r.spkNo, r.orderNo, r.processName, r.machineName, r.colorCode, r.motif, r.approverName, r.processorName].some((v) => v?.toLowerCase().includes(s)),
     );
   }, [done, q]);
 
@@ -77,8 +77,8 @@ export function ResultsTable({ rows, groups }: { rows: SampleRow[]; groups: Mach
               {visible.map((r) => (
                 <tr key={r.id} className="align-top transition-colors hover:bg-canvas/60">
                   <td className="px-4 py-4">
-                    <p className="font-semibold text-ink">SPK {r.spkNo}</p>
-                    {r.orderNo && <p className="mt-0.5 whitespace-nowrap text-xs text-ink-muted">Order {r.orderNo}{r.orderDate ? ` · ${fmtDate(r.orderDate)}` : ""}</p>}
+                    <p className="font-semibold text-ink">Order {r.orderNo ?? r.spkNo}</p>
+                    {r.spkNo !== r.orderNo && <p className="mt-0.5 whitespace-nowrap text-xs text-ink-muted">SPK {r.spkNo}{r.orderDate ? ` · ${fmtDate(r.orderDate)}` : ""}</p>}
                     {r.colorCode && <p className="text-xs text-ink-muted">Warna {r.colorCode}</p>}
                   </td>
                   <td className="px-4 py-4">
@@ -92,14 +92,27 @@ export function ResultsTable({ rows, groups }: { rows: SampleRow[]; groups: Mach
                   <td className="whitespace-nowrap px-4 py-4 text-right font-medium tabular-nums">{fmtDays(r.labDays)}</td>
                   <td className="px-4 py-4 text-right font-medium tabular-nums">{r.trialNo}×</td>
                   <td className="px-4 py-4">
-                    <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-700 ring-1 ring-inset ring-emerald-200">
-                      <BadgeCheck className="h-3.5 w-3.5" aria-hidden /> ACC uji ke-{r.approvedTrialNo ?? "–"}
-                    </span>
-                    <p className="mt-1.5 text-xs text-ink-soft">
-                      {r.rejectedCount > 0 ? `${r.rejectedCount}× rework sebelumnya` : "Langsung ACC"}
-                      {r.approverName && ` · oleh ${r.approverName}`}
-                    </p>
-                    {r.approvedNotes && <p className="mt-0.5 text-xs text-ink-muted">Catatan: {r.approvedNotes}</p>}
+                    {r.processorName ? (
+                      <>
+                        <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-700 ring-1 ring-inset ring-emerald-200">
+                          <BadgeCheck className="h-3.5 w-3.5" aria-hidden /> Selesai oleh {r.processorName}
+                        </span>
+                        {r.completedAt && <p className="mt-1.5 text-xs text-ink-soft">{fmtStamp(r.completedAt)}</p>}
+                        {r.hasPhoto && <p className="mt-1"><PhotoLink id={r.id} /></p>}
+                        {r.resultNote && <p className="mt-0.5 text-xs text-ink-muted">Resep: {r.resultNote}</p>}
+                      </>
+                    ) : (
+                      <>
+                        <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-700 ring-1 ring-inset ring-emerald-200">
+                          <BadgeCheck className="h-3.5 w-3.5" aria-hidden /> ACC uji ke-{r.approvedTrialNo ?? "–"}
+                        </span>
+                        <p className="mt-1.5 text-xs text-ink-soft">
+                          {r.rejectedCount > 0 ? `${r.rejectedCount}× rework sebelumnya` : "Langsung ACC"}
+                          {r.approverName && ` · oleh ${r.approverName}`}
+                        </p>
+                        {r.approvedNotes && <p className="mt-0.5 text-xs text-ink-muted">Catatan: {r.approvedNotes}</p>}
+                      </>
+                    )}
                   </td>
                   <td className="px-4 py-4 text-right font-semibold tabular-nums text-ink">{r.crAtOrder === null ? "–" : r.crAtOrder.toFixed(2)}</td>
                 </tr>

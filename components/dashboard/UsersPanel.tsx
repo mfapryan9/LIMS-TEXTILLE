@@ -14,6 +14,7 @@ export interface RoleOption {
   canApprove: boolean;
   canEditSample: boolean;
   canManageUsers: boolean;
+  canInterveneUrgent: boolean;
 }
 
 export interface UserRowData {
@@ -35,17 +36,18 @@ export interface UserAdmin {
 
 /** Ringkasan hak akses peran, sesuai aturan di lib/roles.ts. */
 export function roleAccess(r: RoleOption): { label: string; tone: string; text: string } {
-  if (r.viewMode === "OPERATOR" || r.canEditSample)
-    return { label: "Operator", tone: "bg-sky-50 text-sky-800 ring-sky-200", text: "Input & edit SPK, urgent, tambah kelompok mesin/proses, jalankan uji" };
-  if (r.canApprove)
+  if (r.viewMode === "OPERATOR")
+    return { label: "Operator lab", tone: "bg-sky-50 text-sky-800 ring-sky-200", text: "Memproses pengajuan lab dan melampirkan foto hasil uji" };
+  if (r.canEditSample)
+    return { label: "Pengaju (PPIC)", tone: "bg-amber-50 text-amber-800 ring-amber-200", text: "Mengajukan sampel ke lab, termasuk urgent" };
+  if (r.canInterveneUrgent)
     return {
-      label: r.canManageUsers ? "Approver + kelola pengguna" : "Approver",
+      label: r.canManageUsers ? "Kepala + kelola pengguna" : "Kepala (monitoring)",
       tone: "bg-emerald-50 text-emerald-800 ring-emerald-200",
-      text: r.canManageUsers ? "ACC / reject hasil uji dan kelola akun pengguna" : "ACC / reject hasil uji",
+      text: r.canManageUsers ? "Monitoring, membatalkan urgent, dan kelola akun pengguna" : "Monitoring dan dapat membatalkan urgent",
     };
-  return { label: "Monitor", tone: "bg-stone-100 text-stone-700 ring-stone-300", text: "Hanya pantau antrean & hasil uji" };
+  return { label: "Monitor", tone: "bg-stone-100 text-stone-700 ring-stone-300", text: "Hanya pantau pengajuan & hasil uji" };
 }
-
 export function UsersPanel({ admin, meId }: { admin: UserAdmin; meId: string }) {
   const { users, roles } = admin;
   const roleById = useMemo(() => new Map(roles.map((r) => [r.id, r])), [roles]);
@@ -203,10 +205,10 @@ function UserDialog({ roles, user, isMe = false, onSubmit, onClose }: {
           <span className="mb-1.5 block font-medium text-ink">Peran</span>
           <select value={roleId} onChange={(e) => setRoleId(e.target.value)} disabled={isMe} className={`${inputCls} disabled:opacity-60`}>
             <option value="">Pilih peran</option>
-            {(["OPERATOR", "APPROVER", "MONITOR", "PLANNER"] as const).map((vm) => {
+            {(["PLANNER", "OPERATOR", "MONITOR", "APPROVER"] as const).map((vm) => {
               const list = roles.filter((r) => r.viewMode === vm);
               if (!list.length) return null;
-              const label = { OPERATOR: "Operator (input SPK & uji)", APPROVER: "Approver (ACC / reject)", MONITOR: "Monitor (hanya pantau)", PLANNER: "Planner" }[vm];
+              const label = { OPERATOR: "Operator lab (proses pengajuan)", APPROVER: "Approver", MONITOR: "Kepala / monitoring", PLANNER: "PPIC (pengaju)" }[vm];
               return <optgroup key={vm} label={label}>{list.map((r) => <option key={r.id} value={r.id}>{r.name}</option>)}</optgroup>;
             })}
           </select>

@@ -58,6 +58,7 @@ model Role {
   canManageMaster Boolean @default(false) // input/ubah waktu proses standar (p)
   canEditSample Boolean @default(false) // tambah (scan) & edit SPK: Operator Lab, Kaur Lab, Kasi, PPIC, Marketing
   canManageUsers Boolean @default(false) // tambah user, ubah peran, reset password, nonaktifkan: Kepala Laboratorium
+  canInterveneUrgent Boolean @default(false) // Sprint 3: kepala dapat membatalkan / menurunkan urgent
   users       User[]
 
   @@map("roles")
@@ -146,6 +147,13 @@ model Sample {
   machineId          String
   status             SampleStatus @default(MENUNGGU)
 
+  // Sprint 3: pengajuan diproses operator (nama pemroses) lalu diselesaikan dengan foto hasil uji
+  processorName    String?
+  processStartedAt DateTime?
+  completedAt      DateTime?
+  resultNote       String?
+  resultPhoto      ResultPhoto?
+
   isUrgent       Boolean   @default(false)
   urgentReason   String?
   urgentById     String?
@@ -168,6 +176,19 @@ model Sample {
   @@index([dueDate])
   @@index([customerName])
   @@map("samples")
+}
+
+// Foto lampiran hasil uji lab (memuat resep yang sudah sesuai). Tabel terpisah agar daftar sampel tetap ringan.
+model ResultPhoto {
+  id        String   @id @default(cuid())
+  sampleId  String   @unique
+  mimeType  String
+  data      Bytes
+  createdAt DateTime @default(now())
+
+  sample Sample @relation(fields: [sampleId], references: [id], onDelete: Cascade)
+
+  @@map("result_photos")
 }
 
 // Percobaan ke-n untuk satu sampel

@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { BadgeCheck, CalendarDays, KeyRound, ListChecks, LogOut, RefreshCw, ScanLine, Users, Zap } from "lucide-react";
+import { BadgeCheck, CalendarDays, FilePlus2, KeyRound, ListChecks, LogOut, RefreshCw, Users, Zap } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import type { Notif, SessionUser, ViewMode } from "@/lib/roles";
@@ -18,10 +18,10 @@ import { SampleForm } from "./SampleForm";
 import { fmtDate, SampleTable, type SampleActions } from "./SampleTable";
 
 const VIEW_COPY: Record<ViewMode, { title: string; hint: string }> = {
-  OPERATOR: { title: "Antrean kerja lab", hint: "Kerjakan dari atas ke bawah: sampel URGENT paling atas, lalu Critical Ratio terkecil." },
-  APPROVER: { title: "Menunggu approval", hint: "ACC kain yang selesai diuji di lab, atau reject agar operator mengulang uji. Input & edit SPK hanya oleh operator." },
-  PLANNER: { title: "Kesiapan sampel", hint: "Tambah SPK, pantau kesiapan, ubah due date, atau tandai sampel urgent." },
-  MONITOR: { title: "Monitoring sampel", hint: "Tampilan hanya-lihat untuk seluruh antrean lab." },
+  OPERATOR: { title: "Pengajuan masuk lab", hint: "Pengajuan dari PPIC. Klik Proses dan isi nama pemroses, lalu Selesai dengan melampirkan foto hasil uji. Urgent paling atas, lalu Critical Ratio terkecil." },
+  APPROVER: { title: "Monitoring pengajuan lab", hint: "Pantau seluruh pengajuan lab." },
+  PLANNER: { title: "Pengajuan ke lab", hint: "Ajukan sampel ke lab (pilih urgent bila mendesak), pantau prosesnya, dan lihat foto hasil uji saat pengajuan selesai." },
+  MONITOR: { title: "Monitoring pengajuan lab", hint: "Pantau seluruh pengajuan lab beserta pemroses dan hasil ujinya. Kepala dapat membatalkan urgent bila diperlukan." },
 };
 
 type Option = { id: string; name: string };
@@ -104,7 +104,7 @@ export function DashboardClient(props: {
   const blank = (): SampleInput => {
     const today = todayJakarta();
     return {
-      orderType: user.roleCode.includes("MARKETING") ? "MARKETING" : "PRODUKSI",
+      orderType: "PRODUKSI",
       orderNo: "", orderDate: "", spkNo: "", customerName: "", motif: "", colorDirection: "", colorCode: "",
       processTypeId: "", machineId: "", newProcess: "", newMachine: "", newMachineP: "", fabricProblem: "", problemDescription: "",
       receivedDate: today, dueDate: defaultDueDate(today), isUrgent: false,
@@ -115,7 +115,7 @@ export function DashboardClient(props: {
   const activeCount = rows.length - doneCount;
   const urgentCount = rows.filter((r) => r.isUrgent && r.status !== "DISETUJUI").length;
   const nav = [
-    { key: "queue" as const, label: "Antrean uji", icon: ListChecks, count: activeCount },
+    { key: "queue" as const, label: "Pengajuan lab", icon: ListChecks, count: activeCount },
     ...(showResults ? [{ key: "results" as const, label: "Hasil uji selesai", icon: BadgeCheck, count: doneCount }] : []),
     ...(showUsers ? [{ key: "users" as const, label: "Kelola pengguna", icon: Users, count: userAdmin!.users.filter((u) => u.isActive).length }] : []),
   ];
@@ -156,7 +156,7 @@ export function DashboardClient(props: {
             className="mx-3 mt-6 flex items-center gap-3 rounded-2xl bg-gradient-to-br from-fuchsia-600 to-pink-500 p-4 text-left text-white shadow-[0_10px_30px_-10px_rgba(192,38,211,0.6)] transition hover:brightness-105">
             <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-white/20"><Zap className="h-5 w-5 fill-white" aria-hidden /></span>
             <span className="leading-tight">
-              <span className="block text-sm font-bold">{urgentCount} sampel urgent</span>
+              <span className="block text-sm font-bold">{urgentCount} pengajuan urgent</span>
               <span className="block text-xs text-white/80">Lihat & kerjakan lebih dulu</span>
             </span>
           </button>
@@ -214,9 +214,9 @@ export function DashboardClient(props: {
                 onClick={() => setForm({ mode: "create" })}
                 className="inline-flex items-center gap-2 rounded-xl bg-brand-600 px-3.5 py-2.5 text-sm font-semibold text-white shadow-glow transition hover:bg-brand-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-600"
               >
-                <ScanLine className="h-4 w-4" aria-hidden />
-                <span className="hidden sm:inline">Tambah SPK</span>
-                <span className="sm:hidden">SPK</span>
+                <FilePlus2 className="h-4 w-4" aria-hidden />
+                <span className="hidden sm:inline">Ajukan ke Lab</span>
+                <span className="sm:hidden">Ajukan</span>
               </button>
             )}
             {changePassword && (
@@ -242,7 +242,7 @@ export function DashboardClient(props: {
           <div aria-hidden className="mt-2 h-1 w-12 rounded-full bg-accent" />
           <p className="mt-1 max-w-3xl text-sm text-ink-muted">
             {tab === "results"
-              ? "Sampel yang sudah di-ACC: jumlah uji/matching dengan master, ACC pada uji ke berapa, dan durasi sejak masuk lab."
+              ? "Pengajuan yang sudah selesai: siapa yang memproses, durasi sejak masuk lab, dan foto hasil uji (resep)."
               : tab === "users"
                 ? "Tambah akun baru, ubah nama atau peran, reset password yang lupa, dan nonaktifkan akun yang tidak dipakai lagi."
                 : copy.hint}
@@ -279,7 +279,7 @@ export function DashboardClient(props: {
             <div className="space-y-3">
               <FilterBar value={filters} onChange={setFilters} />
               <p className="text-xs font-medium text-ink-soft" aria-live="polite">
-                Menampilkan {visible.length} dari {groupRows.length} sampel
+                Menampilkan {visible.length} dari {groupRows.length} pengajuan
                 {filters.machineId !== "ALL" && ` di ${machines.find((m) => m.id === filters.machineId)?.name ?? "kelompok ini"}`}
               </p>
             </div>

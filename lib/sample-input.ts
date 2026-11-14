@@ -57,7 +57,10 @@ export function validateSampleInput(raw: SampleInput): { error: string } | { dat
     isUrgent: raw.isUrgent === true,
   };
 
-  if (!data.spkNo) return { error: "No. SPK wajib diisi" };
+  // Sprint 3: pengajuan PPIC diidentifikasi No. Order + CM warna; No. SPK mengikuti No. Order bila kosong
+  if (!data.orderNo) return { error: "No. Order wajib diisi" };
+  if (!data.colorCode) return { error: "CM warna wajib diisi" };
+  if (!data.spkNo) data.spkNo = data.orderNo;
   if (!data.machineId && !data.newMachine) return { error: "Kelompok mesin wajib dipilih atau diisi" };
   if (!data.processTypeId && !data.newProcess) return { error: "Proses lab wajib dipilih atau diisi" };
   if (data.newMachine) {
@@ -72,6 +75,6 @@ export function validateSampleInput(raw: SampleInput): { error: string } | { dat
   if (data.orderDate && !isDate(data.orderDate)) return { error: "Tanggal order tidak valid" };
   if (!isDate(data.receivedDate)) return { error: "Tanggal terima tidak valid" };
   if (!isDate(data.dueDate)) return { error: "Due date tidak valid" };
-  if (data.dueDate < data.receivedDate) return { error: "Due date tidak boleh sebelum tanggal terima" };
+  if (data.dueDate < data.receivedDate) return { error: "Due date tidak boleh sebelum tanggal pengajuan" };
   return { data };
 }

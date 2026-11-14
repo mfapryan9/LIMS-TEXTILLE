@@ -5,6 +5,7 @@ import { Prisma } from "@prisma/client";
 import { getSessionUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { assertCan } from "@/lib/roles";
+import { todayJakarta } from "@/lib/cr";
 import { validateSampleInput, type SampleFormResult, type SampleInput } from "@/lib/sample-input";
 
 /**
@@ -24,110 +25,90 @@ function audit(tx: Tx, userId: string, sampleId: string | null, action: string, 
   });
 }
 
-function fail(message: string): never {
-  throw new Error(message);
-}
+export type ActionResult = { ok: true } | { ok: false; error: string };
 
-export async function startTrial(sampleId: string) {
+const PHOTO_MAX_BYTES = 4 * 1024 * 1024;
+const PHOTO_TYPES = ["image/jpeg", "image/png", "image/webp"];
+
+/** Operator mulai memproses pengajuan: wajib mengisi nama pemroses. Status → Dalam proses (tampil di semua user). */
+export async function startProcess(sampleId: string, processorName: string): Promise<ActionResult> {
   const user = await getSessionUser();
-  assertCan(user, "runTrial");
+  assertCan(user, "processRequest");
+  const name = String(processorName ?? "").trim().replace(/\s{2,}/g, " ");
+  if (name.length < 2 || name.length > 60) return { ok: false, error: "Nama pemroses wajib diisi (2–60 karakter)" };
 
-  await prisma.$transaction(async (tx) => {
+  const res = await prisma.$transaction(async (tx): Promise<ActionResult> => {
     const s = await tx.sample.findUnique({ where: { id: sampleId }, include: { trials: { orderBy: { trialNo: "desc" }, take: 1 } } });
-    if (!s) fail("Sampel tidak ditemukan");
-    if (s.status !== "MENUNGGU" && s.status !== "MATCHING_ULANG") fail("Sampel tidak dalam status yang bisa diuji");
-    if (s.trials[0]?.status === "BERJALAN") fail("Masih ada percobaan yang berjalan");
-
+    if (!s) return { ok: false, error: "Pengajuan tidak ditemukan" };
+    if (s.status !== "MENUNGGU") return { ok: false, error: "Pengajuan ini sudah diproses" };
     const trialNo = (s.trials[0]?.trialNo ?? 0) + 1;
-    const trial = await tx.testTrial.create({ data: { sampleId, trialNo, operatorId: user.id } });
-    await tx.sample.update({ where: { id: sampleId }, data: { status: "DALAM_PROSES" } });
-    await audit(tx, user.id, sampleId, "TRIAL_STARTED", "TestTrial", trial.id, { status: s.status }, { status: "DALAM_PROSES", trialNo });
+    await tx.testTrial.create({ data: { sampleId, trialNo, operatorId: user.id, notes: `Diproses oleh ${name}` } });
+    await tx.sample.update({ where: { id: sampleId }, data: { status: "DALAM_PROSES", processorName: name, processStartedAt: new Date() } });
+    await audit(tx, user.id, sampleId, "PROCESS_STARTED", "Sample", sampleId, { status: s.status }, { status: "DALAM_PROSES", processorName: name });
+    return { ok: true };
   });
-  revalidatePath("/");
+  if (res.ok) revalidatePath("/");
+  return res;
 }
 
-export async function finishTrial(trialId: string, notes: string) {
+/** Operator menyelesaikan pengajuan: wajib melampirkan foto hasil uji (memuat resep). PPIC mendapat notifikasi. */
+export async function finishProcess(form: FormData): Promise<ActionResult> {
   const user = await getSessionUser();
-  assertCan(user, "runTrial");
-  if (!notes.trim()) fail("Catatan percobaan wajib diisi");
+  assertCan(user, "processRequest");
+  const sampleId = String(form.get("sampleId") ?? "");
+  const note = String(form.get("note") ?? "").trim().slice(0, 1000);
+  const photo = form.get("photo");
+  if (!(photo instanceof File) || photo.size === 0) return { ok: false, error: "Foto hasil uji wajib dilampirkan" };
+  if (!PHOTO_TYPES.includes(photo.type)) return { ok: false, error: "Format foto harus JPG, PNG, atau WEBP" };
+  if (photo.size > PHOTO_MAX_BYTES) return { ok: false, error: "Ukuran foto maksimal 4 MB" };
+  const data = Buffer.from(await photo.arrayBuffer());
 
-  await prisma.$transaction(async (tx) => {
-    const t = await tx.testTrial.findUnique({ where: { id: trialId } });
-    if (!t || t.status !== "BERJALAN") fail("Percobaan tidak sedang berjalan");
-
-    await tx.testTrial.update({ where: { id: trialId }, data: { status: "SELESAI", finishedAt: new Date(), notes: notes.trim() } });
-    await tx.sample.update({ where: { id: t.sampleId }, data: { status: "MENUNGGU_APPROVAL" } });
-    await audit(tx, user.id, t.sampleId, "TRIAL_FINISHED", "TestTrial", trialId, undefined, { notes: notes.trim() });
-  });
-  revalidatePath("/");
-}
-
-async function decide(trialId: string, decision: "APPROVED" | "REJECTED", note?: string) {
-  const user = await getSessionUser();
-  assertCan(user, "approve");
-  if (decision === "REJECTED" && !note?.trim()) fail("Alasan matching ulang wajib diisi");
-
-  await prisma.$transaction(async (tx) => {
-    const t = await tx.testTrial.findUnique({ where: { id: trialId } });
-    if (!t || t.status !== "SELESAI" || t.decision !== "PENDING") fail("Percobaan tidak menunggu approval");
-
-    await tx.testTrial.update({
-      where: { id: trialId },
-      data: { decision, approverId: user.id, decidedAt: new Date(), rejectNote: decision === "REJECTED" ? note!.trim() : null },
+  const res = await prisma.$transaction(async (tx): Promise<ActionResult> => {
+    const s = await tx.sample.findUnique({ where: { id: sampleId }, include: { trials: { orderBy: { trialNo: "desc" }, take: 1 } } });
+    if (!s) return { ok: false, error: "Pengajuan tidak ditemukan" };
+    if (s.status !== "DALAM_PROSES") return { ok: false, error: "Pengajuan belum diproses atau sudah selesai" };
+    const now = new Date();
+    const trial = s.trials[0];
+    if (trial) {
+      await tx.testTrial.update({
+        where: { id: trial.id },
+        data: { status: "SELESAI", finishedAt: now, decision: "APPROVED", decidedAt: now, notes: note || trial.notes },
+      });
+    }
+    await tx.resultPhoto.upsert({
+      where: { sampleId },
+      create: { sampleId, mimeType: photo.type, data },
+      update: { mimeType: photo.type, data, createdAt: now },
     });
-    const status = decision === "APPROVED" ? "DISETUJUI" : "MATCHING_ULANG";
-    await tx.sample.update({ where: { id: t.sampleId }, data: { status } });
-    await audit(tx, user.id, t.sampleId, decision, "TestTrial", trialId, undefined, { status, note: note?.trim() });
-  });
-  revalidatePath("/");
+    await tx.sample.update({ where: { id: sampleId }, data: { status: "DISETUJUI", completedAt: now, resultNote: note || null } });
+    await audit(tx, user.id, sampleId, "PROCESS_FINISHED", "Sample", sampleId, { status: s.status },
+      { status: "DISETUJUI", processorName: s.processorName, note, photoBytes: data.length });
+    return { ok: true };
+  }, { timeout: 20000 });
+  if (res.ok) revalidatePath("/");
+  return res;
 }
 
-export async function approve(trialId: string) {
-  await decide(trialId, "APPROVED");
-}
-
-export async function reject(trialId: string, note: string) {
-  await decide(trialId, "REJECTED", note);
-}
-
-export async function changeDueDate(sampleId: string, dueDate: string, reason: string) {
+/** Intervensi kepala: membatalkan / menurunkan status urgent sebuah pengajuan (wajib alasan). */
+export async function cancelUrgent(sampleId: string, reason: string): Promise<ActionResult> {
   const user = await getSessionUser();
-  assertCan(user, "editDue");
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(dueDate) || Number.isNaN(Date.parse(dueDate))) fail("Format due date tidak valid");
-  if (!reason.trim()) fail("Alasan perubahan wajib diisi");
+  assertCan(user, "interveneUrgent");
+  const why = String(reason ?? "").trim();
+  if (!why) return { ok: false, error: "Alasan pembatalan urgent wajib diisi" };
 
-  await prisma.$transaction(async (tx) => {
+  const res = await prisma.$transaction(async (tx): Promise<ActionResult> => {
     const s = await tx.sample.findUnique({ where: { id: sampleId } });
-    if (!s) fail("Sampel tidak ditemukan");
-    if (s.status === "DISETUJUI") fail("Sampel sudah disetujui");
-
-    await tx.sample.update({ where: { id: sampleId }, data: { dueDate: new Date(`${dueDate}T00:00:00Z`) } });
-    await audit(tx, user.id, sampleId, "DUE_DATE_CHANGED", "Sample", sampleId,
-      { dueDate: s.dueDate.toISOString().slice(0, 10) }, { dueDate, reason: reason.trim() });
+    if (!s) return { ok: false, error: "Pengajuan tidak ditemukan" };
+    if (!s.isUrgent) return { ok: false, error: "Pengajuan ini tidak berstatus urgent" };
+    if (s.status === "DISETUJUI") return { ok: false, error: "Pengajuan sudah selesai" };
+    await tx.sample.update({ where: { id: sampleId }, data: { isUrgent: false, urgentReason: null, urgentById: null, urgentAt: null } });
+    await audit(tx, user.id, sampleId, "URGENT_CANCELLED", "Sample", sampleId,
+      { isUrgent: true, urgentReason: s.urgentReason }, { isUrgent: false, reason: why, by: user.name });
+    return { ok: true };
   });
-  revalidatePath("/");
+  if (res.ok) revalidatePath("/");
+  return res;
 }
-
-export async function setUrgent(sampleId: string, urgent: boolean, reason: string) {
-  const user = await getSessionUser();
-  assertCan(user, "markUrgent");
-
-  await prisma.$transaction(async (tx) => {
-    const s = await tx.sample.findUnique({ where: { id: sampleId } });
-    if (!s) fail("Sampel tidak ditemukan");
-
-    await tx.sample.update({
-      where: { id: sampleId },
-      data: urgent
-        ? { isUrgent: true, urgentReason: reason.trim() || null, urgentById: user.id, urgentAt: new Date() }
-        : { isUrgent: false, urgentReason: null, urgentById: null, urgentAt: null },
-    });
-    await audit(tx, user.id, sampleId, urgent ? "URGENT_MARKED" : "URGENT_REMOVED", "Sample", sampleId,
-      { isUrgent: s.isUrgent }, { isUrgent: urgent, reason: reason.trim() });
-  });
-  revalidatePath("/");
-}
-
 // ───────────── Tambah / edit SPK ─────────────
 // Mengembalikan { ok, error } alih-alih throw: di production pesan error dari throw disembunyikan Next.js,
 // padahal form perlu menampilkan alasan gagal (mis. SPK + kode warna sudah terdaftar).
@@ -223,7 +204,7 @@ async function resolveMaster(tx: Tx, userId: string, d: SampleInput): Promise<{ 
 
 const urgentData = (urgent: boolean, userId: string) =>
   urgent
-    ? { isUrgent: true, urgentReason: "Ditandai saat input SPK", urgentById: userId, urgentAt: new Date() }
+    ? { isUrgent: true, urgentReason: "Diajukan urgent oleh PPIC", urgentById: userId, urgentAt: new Date() }
     : { isUrgent: false, urgentReason: null, urgentById: null, urgentAt: null };
 
 function writeError(e: unknown): SampleFormResult {
@@ -238,8 +219,9 @@ function writeError(e: unknown): SampleFormResult {
 
 export async function createSample(input: SampleInput): Promise<SampleFormResult> {
   const user = await getSessionUser();
-  assertCan(user, "editSample");
-  const v = validateSampleInput(input);
+  assertCan(user, "submitRequest");
+  // Pengajuan PPIC: tanggal masuk lab = hari ini (WIB), jenis order produksi
+  const v = validateSampleInput({ ...input, orderType: "PRODUKSI", receivedDate: todayJakarta(), orderDate: input.orderDate || todayJakarta() });
   if ("error" in v) return { ok: false, error: v.error };
 
   if (v.data.isUrgent && !user.canMarkUrgent) return { ok: false, error: "Anda tidak berhak menandai urgent" };
@@ -261,7 +243,7 @@ export async function createSample(input: SampleInput): Promise<SampleFormResult
 
 export async function updateSample(sampleId: string, input: SampleInput): Promise<SampleFormResult> {
   const user = await getSessionUser();
-  assertCan(user, "editSample");
+  assertCan(user, "submitRequest");
   const v = validateSampleInput(input);
   if ("error" in v) return { ok: false, error: v.error };
 
@@ -269,6 +251,7 @@ export async function updateSample(sampleId: string, input: SampleInput): Promis
     await prisma.$transaction(async (tx) => {
       const before = await tx.sample.findUnique({ where: { id: sampleId } });
       if (!before) throw new Error("NOT_FOUND");
+      if (before.status !== "MENUNGGU") throw new FormError("Pengajuan yang sudah diproses lab tidak dapat diubah");
       const urgentChanged = before.isUrgent !== v.data.isUrgent;
       if (urgentChanged && !user.canMarkUrgent) throw new FormError("Anda tidak berhak mengubah status urgent");
       const master = await resolveMaster(tx, user.id, v.data);
@@ -279,7 +262,7 @@ export async function updateSample(sampleId: string, input: SampleInput): Promis
       await audit(tx, user.id, sampleId, "SAMPLE_UPDATED", "Sample", sampleId, JSON.parse(JSON.stringify(before)), { ...v.data, ...master });
     });
   } catch (e) {
-    if (e instanceof Error && e.message === "NOT_FOUND") return { ok: false, error: "Sampel tidak ditemukan" };
+    if (e instanceof Error && e.message === "NOT_FOUND") return { ok: false, error: "Pengajuan tidak ditemukan" };
     return writeError(e);
   }
   revalidatePath("/");

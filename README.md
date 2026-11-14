@@ -23,13 +23,14 @@ prisma/seed.ts            role, akun, master dari Excel, riwayat Excel, contoh a
 
 Login memakai **username**. Password awal akun hasil seed: `lims12345` (atau `SEED_PASSWORD`).
 
-| Username | Tampilan | Hak |
+| Username | Peran | Hak (alur Sprint 3) |
 |---|---|---|
-| operator.lab | Operator | **Satu-satunya** yang input antrean: tambah SPK (scan kartu), edit SPK & due date, tandai urgent, mulai/selesai uji ke-n |
-| kalab | Kepala Laboratorium (approver) | ACC / reject hasil uji, tab **Hasil uji selesai**, dan menu **Kelola pengguna**: tambah akun, ubah nama/peran, reset password, nonaktifkan akun |
-| kepala.produksi.df | Kepala (approver) | ACC kain yang selesai diuji, atau reject → kembali ke operator untuk uji ulang; tab **Hasil uji selesai** |
-| kaur.lab, kasi, ppic, kepala.ppic, marketing, kepala.marketing, admin | Monitor | Hanya pantau (termasuk hasil uji selesai) |
-
+| ppic | Pengaju | **Satu-satunya** yang mengajukan sampel ke lab: No. Order, CM warna, motif, proses, due date, deskripsi order & warna, pilihan urgent (bisa scan kartu SPK). Notifikasi: pengajuan selesai + foto hasil uji |
+| operator.lab | Operator lab | Klik **Proses** (wajib isi nama pemroses) lalu **Selesai** dengan foto hasil uji (resep). Notifikasi: pengajuan masuk & urgent (terpisah) |
+| kalab | Kepala Laboratorium | Monitoring, batalkan urgent, menu **Kelola pengguna** |
+| kepala.ppic, kepala.produksi.df | Kepala | Monitoring + batalkan urgent. Notifikasi setiap pengajuan urgent |
+| kaur.lab, kasi | Kepala lab | Monitoring + batalkan urgent. Notifikasi pengajuan masuk & urgent |
+| admin | Monitor | Hanya pantau |
 Semua akun bisa **Ganti Password** sendiri (ikon kunci di kartu profil). Ganti / reset password otomatis mengeluarkan sesi lama akun itu dari perangkat lain.
 
 Setiap sampel menampilkan berapa kali sudah diuji/matching dengan master, jumlah rework (beserta alasan terakhir),

@@ -67,6 +67,7 @@ export async function findSessionUser(): Promise<SessionUser | null> {
     canManageMaster: u.role.canManageMaster,
     canEditSample: u.role.canEditSample,
     canManageUsers: u.role.canManageUsers,
+    canInterveneUrgent: u.role.canInterveneUrgent,
     notificationsSeenAt: u.notificationsSeenAt?.toISOString() ?? null,
   };
 }

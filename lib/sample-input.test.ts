@@ -2,11 +2,22 @@ import { describe, expect, it } from "vitest";
 import { validateSampleInput, type SampleInput } from "./sample-input";
 
 const base: SampleInput = {
-  orderType: "PRODUKSI", orderNo: "", orderDate: "", spkNo: "2609001", customerName: "", motif: "", colorDirection: "", colorCode: "",
+  orderType: "PRODUKSI", orderNo: "26-4001", orderDate: "", spkNo: "2609001", customerName: "", motif: "", colorDirection: "", colorCode: "CM-415",
   processTypeId: "p1", machineId: "m1", newProcess: "", newMachine: "", newMachineP: "",
   fabricProblem: "", problemDescription: "", receivedDate: "2026-11-03", dueDate: "2026-11-10", isUrgent: false,
 };
 const ok = (r: ReturnType<typeof validateSampleInput>) => ("data" in r ? r.data : (expect.fail(r.error) as never));
+
+describe("validateSampleInput: pengajuan PPIC (Sprint 3)", () => {
+  it("No. Order dan CM warna wajib diisi", () => {
+    expect(validateSampleInput({ ...base, orderNo: "" })).toEqual({ error: "No. Order wajib diisi" });
+    expect(validateSampleInput({ ...base, colorCode: " " })).toEqual({ error: "CM warna wajib diisi" });
+  });
+
+  it("No. SPK mengikuti No. Order bila tidak diisi", () => {
+    expect(ok(validateSampleInput({ ...base, spkNo: "", orderNo: "26-4002" })).spkNo).toBe("26-4002");
+  });
+});
 
 describe("validateSampleInput: proses / kelompok mesin baru & urgent", () => {
   it("menerima pilihan dari daftar dan mengabaikan isian baru", () => {
