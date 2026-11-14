@@ -7,7 +7,10 @@ export interface SampleInput {
   customerName: string;
   motif: string;
   colorDirection: string;
-  colorCode: string;
+  colorCode: string; // No. CM
+  colorName: string; // Warna (nama warna)
+  parties: string[]; // Nomor partai, bisa lebih dari satu
+  requesterName: string; // Nama yang mengajukan (akun PPIC dipakai bersama)
   processTypeId: string; // kosong bila mengisi proses baru (newProcess)
   machineId: string; // kosong bila mengisi kelompok mesin baru (newMachine)
   newProcess: string; // nama proses lab baru → otomatis masuk daftar pilihan
@@ -21,7 +24,7 @@ export interface SampleInput {
 }
 
 /** Kolom bertipe teks (untuk input biasa di form). */
-export type SampleTextField = Exclude<keyof SampleInput, "orderType" | "isUrgent">;
+export type SampleTextField = Exclude<keyof SampleInput, "orderType" | "isUrgent" | "parties">;
 
 export type SampleFormResult = { ok: true } | { ok: false; error: string };
 
@@ -44,6 +47,10 @@ export function validateSampleInput(raw: SampleInput): { error: string } | { dat
     motif: t(raw.motif),
     colorDirection: t(raw.colorDirection),
     colorCode: t(raw.colorCode).toUpperCase(),
+    colorName: t(raw.colorName),
+    // Partai: rapikan, buang yang kosong / ganda (urutan dipertahankan)
+    parties: Array.from(new Set((Array.isArray(raw.parties) ? raw.parties : []).map((p) => t(p).toUpperCase()).filter(Boolean))),
+    requesterName: t(raw.requesterName),
     processTypeId,
     machineId,
     // Nama baru hanya dipakai bila tidak memilih dari daftar
@@ -58,8 +65,11 @@ export function validateSampleInput(raw: SampleInput): { error: string } | { dat
   };
 
   // Sprint 3: pengajuan PPIC diidentifikasi No. Order + CM warna; No. SPK mengikuti No. Order bila kosong
-  if (!data.orderNo) return { error: "No. Order wajib diisi" };
-  if (!data.colorCode) return { error: "CM warna wajib diisi" };
+  if (!data.orderNo) return { error: "Nomor Order wajib diisi" };
+  if (!data.colorCode) return { error: "No. CM wajib diisi" };
+  if (data.parties.length > 30) return { error: "Maksimal 30 partai per pengajuan" };
+  if (data.parties.some((p) => p.length > 40)) return { error: "Nomor partai maksimal 40 karakter" };
+  if (data.requesterName.length < 2 || data.requesterName.length > 60) return { error: "Nama pengaju wajib diisi (2–60 karakter)" };
   if (!data.spkNo) data.spkNo = data.orderNo;
   if (!data.machineId && !data.newMachine) return { error: "Kelompok mesin wajib dipilih atau diisi" };
   if (!data.processTypeId && !data.newProcess) return { error: "Proses lab wajib dipilih atau diisi" };

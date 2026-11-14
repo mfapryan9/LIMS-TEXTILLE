@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { validateSampleInput, type SampleInput } from "./sample-input";
 
 const base: SampleInput = {
-  orderType: "PRODUKSI", orderNo: "26-4001", orderDate: "", spkNo: "2609001", customerName: "", motif: "", colorDirection: "", colorCode: "CM-415",
+  orderType: "PRODUKSI", orderNo: "26-4001", orderDate: "", spkNo: "2609001", customerName: "", motif: "", colorDirection: "", colorCode: "CM-415", colorName: "Merah marun", parties: ["P-01"], requesterName: "Rina",
   processTypeId: "p1", machineId: "m1", newProcess: "", newMachine: "", newMachineP: "",
   fabricProblem: "", problemDescription: "", receivedDate: "2026-11-03", dueDate: "2026-11-10", isUrgent: false,
 };
@@ -10,8 +10,17 @@ const ok = (r: ReturnType<typeof validateSampleInput>) => ("data" in r ? r.data 
 
 describe("validateSampleInput: pengajuan PPIC (Sprint 3)", () => {
   it("No. Order dan CM warna wajib diisi", () => {
-    expect(validateSampleInput({ ...base, orderNo: "" })).toEqual({ error: "No. Order wajib diisi" });
-    expect(validateSampleInput({ ...base, colorCode: " " })).toEqual({ error: "CM warna wajib diisi" });
+    expect(validateSampleInput({ ...base, orderNo: "" })).toEqual({ error: "Nomor Order wajib diisi" });
+    expect(validateSampleInput({ ...base, colorCode: " " })).toEqual({ error: "No. CM wajib diisi" });
+  });
+
+  it("partai opsional dan bisa lebih dari satu: dirapikan, kapital, tanpa ganda", () => {
+    expect(ok(validateSampleInput({ ...base, parties: [" p-01 ", "P-02", "", "p-01"] })).parties).toEqual(["P-01", "P-02"]);
+    expect(ok(validateSampleInput({ ...base, parties: [" "] })).parties).toEqual([]);
+  });
+
+  it("nama pengaju wajib diisi", () => {
+    expect(validateSampleInput({ ...base, requesterName: "" })).toHaveProperty("error");
   });
 
   it("No. SPK mengikuti No. Order bila tidak diisi", () => {

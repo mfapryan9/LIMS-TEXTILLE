@@ -103,8 +103,20 @@ function InlineForm(p: { label: string; value: string; onChange: (v: string) => 
 
 const fmt = new Intl.DateTimeFormat("id-ID", { day: "2-digit", month: "short", year: "numeric", timeZone: "UTC" });
 export const fmtDate = (s: string) => fmt.format(new Date(s + "T00:00:00Z"));
-const fmtDateTime = new Intl.DateTimeFormat("id-ID", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit", timeZone: "Asia/Jakarta" });
+const fmtDateTime = new Intl.DateTimeFormat("id-ID", { day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit", timeZone: "Asia/Jakarta" });
 export const fmtStamp = (iso: string) => fmtDateTime.format(new Date(iso));
+
+/** Nomor partai (bisa lebih dari satu) sebagai chip kecil. */
+export function PartyChips({ parties }: { parties: string[] }) {
+  return (
+    <p className="mt-1 flex flex-wrap items-center gap-1" aria-label={`Partai: ${parties.join(", ")}`}>
+      <span className="text-[11px] font-medium text-ink-soft">Partai</span>
+      {parties.map((p) => (
+        <span key={p} className="rounded-md bg-canvas px-1.5 py-0.5 text-[11px] font-semibold text-ink ring-1 ring-line">{p}</span>
+      ))}
+    </p>
+  );
+}
 
 /** Link foto hasil uji (dibuka di tab baru). */
 export function PhotoLink({ id }: { id: string }) {
@@ -178,7 +190,9 @@ export function SampleTable({ rows, user, actions, highlightId, onEdit }: { rows
                 <td className="max-w-[18rem] px-4 py-4">
                   <p className="font-semibold text-ink">Order {r.orderNo ?? r.spkNo}</p>
                   {r.spkNo !== r.orderNo && <p className="text-xs text-ink-soft">SPK {r.spkNo}</p>}
-                  {r.colorCode && <p className="mt-0.5 text-xs font-medium text-ink">CM {r.colorCode}{r.motif ? <span className="font-normal text-ink-muted"> · motif {r.motif}</span> : null}</p>}
+                  {r.colorCode && <p className="mt-0.5 text-xs font-medium text-ink">No. CM {r.colorCode}{r.colorName ? <span className="font-normal text-ink-muted"> · {r.colorName}</span> : null}</p>}
+                  {r.motif && <p className="text-xs text-ink-muted">Motif {r.motif}</p>}
+                  {r.parties.length > 0 && <PartyChips parties={r.parties} />}
                   {r.colorDirection && <p className="text-xs text-ink-muted">Warna: {r.colorDirection}</p>}
                   {r.problemDescription && <p className="line-clamp-2 text-xs text-ink-muted" title={r.problemDescription}>Order: {r.problemDescription}</p>}
                 </td>
@@ -189,7 +203,8 @@ export function SampleTable({ rows, user, actions, highlightId, onEdit }: { rows
                 </td>
                 <td className="whitespace-nowrap px-4 py-4">
                   <p className="font-medium text-ink">{fmtDate(r.dueDate)}</p>
-                  <p className="text-xs text-ink-soft">diajukan {fmtDate(r.receivedDate)}</p>
+                  <p className="text-xs text-ink-soft">diajukan {fmtStamp(r.createdAt)}</p>
+                  {r.requesterName && <p className="text-xs text-ink-soft">oleh {r.requesterName}</p>}
                 </td>
                 <td className="px-4 py-4">
                   <div className="flex flex-col items-start gap-1.5">

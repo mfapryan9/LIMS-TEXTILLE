@@ -98,3 +98,36 @@ describe("parseSpkText", () => {
     expect(draft.dueDate).toBe("2026-11-08");
   });
 });
+
+describe("parseSpkText: kartu pengajuan (Nomor Order, No. CM, Warna, Partai, Nama pengaju)", () => {
+  const text = [
+    "KARTU PENGAJUAN LAB",
+    "Nama Pengaju : Rina Wulandari",
+    "Nomor Order : 26-4010",
+    "No. CM : CM-415",
+    "Warna : Merah Marun",
+    "Partai : P-01, P-02",
+    "Partai : P-03",
+    "Proses : Dyeing Reaktif",
+    "Due Date : 20/11/2026",
+    "Deskripsi Order : buyer ekspor 500 m",
+    "Deskripsi Warna : lebih tua dari standar",
+  ].join("\n");
+  const { draft, found } = parseSpkText(text, masters);
+
+  it("membaca label baru sesuai kartu", () => {
+    expect(draft.requesterName).toBe("Rina Wulandari");
+    expect(draft.orderNo).toBe("26-4010");
+    expect(draft.colorCode).toBe("CM-415");
+    expect(draft.colorName).toBe("Merah Marun");
+    expect(draft.processTypeId).toBe("p1");
+    expect(draft.dueDate).toBe("2026-11-20");
+    expect(draft.problemDescription).toBe("buyer ekspor 500 m");
+    expect(draft.colorDirection).toBe("lebih tua dari standar");
+  });
+
+  it("partai lebih dari satu digabung dari beberapa baris", () => {
+    expect(draft.parties).toEqual(["P-01", "P-02", "P-03"]);
+    expect(found).toContain("parties");
+  });
+});

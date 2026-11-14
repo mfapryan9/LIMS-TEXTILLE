@@ -183,6 +183,11 @@ export function SampleForm(props: {
     if (k === "dueDate") setDueTouched(true);
   };
 
+  // Partai bisa lebih dari satu: daftar isian yang bisa ditambah / dihapus
+  const setParty = (i: number, v: string) => setValues((prev) => ({ ...prev, parties: prev.parties.map((p, j) => (j === i ? v : p)) }));
+  const addParty = () => setValues((prev) => ({ ...prev, parties: [...prev.parties, ""] }));
+  const removeParty = (i: number) => setValues((prev) => ({ ...prev, parties: prev.parties.filter((_, j) => j !== i) }));
+
   async function scan(src: Blob | HTMLCanvasElement) {
     setCamera(false);
     setError(null);
@@ -225,9 +230,9 @@ export function SampleForm(props: {
       if (!res.ok) return setError(res.error);
       if (!addAnother) return onClose();
       // SPK yang sama, warna berikutnya: pertahankan data SPK, kosongkan data warna
-      setValues((v) => ({ ...v, colorCode: "", colorDirection: "" }));
-      setFound((f) => new Set(Array.from(f).filter((k) => k !== "colorCode" && k !== "colorDirection")));
-      setNotice(`Terkirim: order ${values.orderNo}${values.colorCode ? ` · ${values.colorCode}` : ""}. Lanjutkan isi CM warna berikutnya.`);
+      setValues((v) => ({ ...v, colorCode: "", colorName: "", colorDirection: "", parties: [""] }));
+      setFound((f) => new Set(Array.from(f).filter((k) => !["colorCode", "colorName", "colorDirection", "parties"].includes(k))));
+      setNotice(`Terkirim: order ${values.orderNo}${values.colorCode ? ` · ${values.colorCode}` : ""}. Lanjutkan isi No. CM berikutnya.`);
     });
   }
 
@@ -313,10 +318,39 @@ export function SampleForm(props: {
             )}
             {error && <p role="alert" className="rounded-xl bg-rose-50 px-3.5 py-2.5 text-sm text-rose-700 ring-1 ring-rose-200">{error}</p>}
 
-            <FormSection title="Data order" desc="No. Order dan CM warna wajib diisi.">
-              <Field fromPhoto={found.has("orderNo" as SpkField)} label="No. Order">{text("orderNo", "mis. 26-3012")}</Field>
-              <Field fromPhoto={found.has("colorCode" as SpkField)} label="CM warna">{text("colorCode", "mis. CM-102")}</Field>
+            <FormSection title="Data order" desc="Nama pengaju, Nomor Order, dan No. CM wajib diisi. Partai opsional dan bisa lebih dari satu.">
+              <Field fromPhoto={found.has("requesterName" as SpkField)} label="Nama pengaju">{text("requesterName", "Nama yang mengajukan")}</Field>
+              <Field fromPhoto={found.has("orderNo" as SpkField)} label="Nomor Order">{text("orderNo", "mis. 26-3012")}</Field>
+              <Field fromPhoto={found.has("colorCode" as SpkField)} label="No. CM">{text("colorCode", "mis. CM-102")}</Field>
+              <Field fromPhoto={found.has("colorName" as SpkField)} label="Warna">{text("colorName", "mis. Merah marun")}</Field>
               <Field fromPhoto={found.has("motif" as SpkField)} label="Motif (opsional)">{text("motif", "mis. polos / batik")}</Field>
+              <div className="text-sm sm:col-span-2">
+                <span className="mb-1.5 flex items-center gap-2 font-medium text-ink">
+                  Partai (opsional)
+                  <span className="text-xs font-normal text-ink-soft">{values.parties.filter((p) => p.trim()).length} terisi</span>
+                  {found.has("parties" as SpkField) && (
+                    <span className="inline-flex items-center gap-1 rounded-full bg-brand-100 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-brand-800">
+                      <Sparkles className="h-3 w-3" aria-hidden /> dari foto
+                    </span>
+                  )}
+                </span>
+                <div className="grid gap-2 sm:grid-cols-2">
+                  {values.parties.map((p, i) => (
+                    <span key={i} className="flex items-center gap-2">
+                      <input value={p} onChange={(e) => setParty(i, e.target.value)} placeholder={`Partai ${i + 1}, mis. P-0${i + 1}`} aria-label={`Partai ${i + 1}`}
+                        className={`${fieldCls} ${found.has("parties" as SpkField) ? "border-brand-300 bg-brand-50/50" : "border-line"}`} />
+                      {values.parties.length > 1 && (
+                        <button type="button" onClick={() => removeParty(i)} aria-label={`Hapus partai ${i + 1}`} className="shrink-0 rounded-lg p-2 text-ink-soft hover:bg-rose-50 hover:text-rose-600">
+                          <X className="h-4 w-4" aria-hidden />
+                        </button>
+                      )}
+                    </span>
+                  ))}
+                </div>
+                <button type="button" onClick={addParty} className="mt-2 inline-flex items-center gap-1 rounded-lg px-2 py-1.5 text-xs font-semibold text-brand-600 hover:bg-brand-50">
+                  <Plus className="h-3.5 w-3.5" aria-hidden /> Tambah partai
+                </button>
+              </div>
             </FormSection>
             <FormSection title="Proses & jadwal" desc="Pilih dari daftar, atau pilih “+ Tambah baru” bila belum ada. Data baru otomatis masuk daftar pilihan.">
               <Field fromPhoto={found.has("machineId" as SpkField)} label="Kelompok mesin (sheet)">
@@ -407,7 +441,7 @@ export function SampleForm(props: {
           <button type="button" onClick={onClose} className={ghostBtn}>Batal</button>
           {mode === "create" && (
             <button type="button" disabled={pending || ocr.state === "running"} onClick={() => submit(true)} className={ghostBtn}>
-              <Plus className="h-4 w-4" aria-hidden /> Kirim &amp; ajukan warna lain
+              <Plus className="h-4 w-4" aria-hidden /> Kirim &amp; ajukan No. CM lain
             </button>
           )}
           <button type="button" disabled={pending || ocr.state === "running"} onClick={() => submit(false)} className={primaryBtn}>

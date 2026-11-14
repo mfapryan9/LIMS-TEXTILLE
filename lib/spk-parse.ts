@@ -16,7 +16,10 @@ export interface SpkDraft {
   customerName?: string;
   motif?: string;
   colorDirection?: string;
-  colorCode?: string;
+  colorCode?: string; // No. CM
+  colorName?: string; // Warna
+  parties?: string[]; // Partai (bisa lebih dari satu)
+  requesterName?: string; // Nama pengaju
   processTypeId?: string;
   machineId?: string;
   fabricProblem?: string;
@@ -32,12 +35,14 @@ interface Option {
   name: string;
 }
 
-type TextField = Exclude<SpkField, "orderType" | "processTypeId" | "machineId">;
-type LabelTarget = TextField | "orderType" | "process" | "machine" | "ignore";
+type TextField = Exclude<SpkField, "orderType" | "processTypeId" | "machineId" | "parties">;
+type LabelTarget = TextField | "orderType" | "process" | "machine" | "parties" | "ignore";
 
 // Urutan penting: label yang lebih spesifik diperiksa dulu ("arah warna" sebelum "warna").
 const LABELS: [LabelTarget, string[]][] = [
   ["orderNo", ["nomor order", "no. order", "no.order", "no order"]],
+  ["requesterName", ["nama pengaju", "diajukan oleh", "pengaju", "pemohon", "requester"]],
+  ["parties", ["nomor partai", "no. partai", "no.partai", "no partai", "partai", "lot", "batch"]],
   ["orderDate", ["tanggal order", "tgl. order", "tgl order"]],
   // Kolom kartu SPK yang bukan input form; dikenali agar tidak tertangkap label lain ("tgl", "date")
   ["ignore", ["tanggal mulai", "tgl. mulai", "tgl mulai", "tanggal selesai", "tgl. selesai", "tgl selesai", "duration", "durasi", "overdue", "critical ratio", "processing time"]],
@@ -46,7 +51,9 @@ const LABELS: [LabelTarget, string[]][] = [
   // Sprint 3: "Deskripsi warna" disimpan di kolom arah warna, "Deskripsi order" di keterangan problem
   ["colorDirection", ["deskripsi warna", "keterangan warna", "arah warna", "color direction", "arah"]],
   ["problemDescription", ["deskripsi order", "keterangan order", "deskripsi", "keterangan", "description"]],
-  ["colorCode", ["cm warna", "kode warna", "color code", "kode cm", "no. warna", "no warna", "warna"]],
+  ["colorCode", ["nomor cm", "no. cm", "no.cm", "no cm", "cm warna", "kode warna", "color code", "kode cm", "no. warna", "no warna"]],
+  // "Warna" saja = nama warna (dicek setelah label No. CM / kode warna)
+  ["colorName", ["nama warna", "warna", "color"]],
   ["motif", ["motif", "desain", "design", "corak"]],
   ["process", ["jenis proses", "proses lab", "proses", "process"]],
   ["machine", ["mesin", "machine"]],
@@ -192,6 +199,12 @@ export function parseSpkText(
         case "dueDate": set(hit.target, parseDate(value)); break;
         case "process": set("processTypeId", matchOption(value, masters.processTypes)); break;
         case "machine": set("machineId", matchOption(value, masters.machines)); break;
+        case "parties": {
+          // Beberapa partai dalam satu baris ("P-01, P-02") atau di beberapa baris berlabel Partai
+          const list = value.split(/[,;/]|\s{2,}|\s+dan\s+/i).map((p) => clean(p).toUpperCase()).filter(Boolean);
+          draft.parties = Array.from(new Set([...(draft.parties ?? []), ...list]));
+          break;
+        }
         case "orderType":
           if (/marketing/i.test(value)) set("orderType", "MARKETING");
           else if (/produksi|production/i.test(value)) set("orderType", "PRODUKSI");

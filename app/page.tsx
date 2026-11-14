@@ -68,6 +68,7 @@ export default async function DashboardPage() {
       receivedDate: s.receivedDate, dueDate: s.dueDate,
       status: s.status, isUrgent: s.isUrgent,
       createdAt: s.createdAt.toISOString(), urgentAt: s.urgentAt?.toISOString() ?? null,
+      colorName: s.colorName, parties: s.parties, requesterName: s.requesterName,
       processorName: s.processorName, processStartedAt: s.processStartedAt?.toISOString() ?? null,
       completedAt: s.completedAt?.toISOString() ?? null, resultNote: s.resultNote, hasPhoto: !!s.resultPhoto,
       trialNo: last?.trialNo ?? 0,

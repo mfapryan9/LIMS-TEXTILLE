@@ -22,7 +22,10 @@ export type SampleRow = {
   dueDate: string; // YYYY-MM-DD
   status: SampleStatusKey;
   isUrgent: boolean;
-  createdAt: string; // ISO, waktu pengajuan dibuat
+  createdAt: string; // ISO, waktu pengajuan dibuat (tanggal + jam)
+  colorName: string | null; // Warna
+  parties: string[]; // Nomor partai
+  requesterName: string | null; // Nama yang mengajukan
   urgentAt: string | null; // ISO
   processorName: string | null; // nama operator yang memproses (Sprint 3)
   processStartedAt: string | null; // ISO

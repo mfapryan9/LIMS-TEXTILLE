@@ -36,6 +36,7 @@ export interface SampleEditor {
 const toInput = (r: SampleRow): SampleInput => ({
   orderType: r.orderType, orderNo: r.orderNo ?? "", orderDate: r.orderDate ?? "", spkNo: r.spkNo,
   customerName: r.customerName ?? "", motif: r.motif ?? "", colorDirection: r.colorDirection ?? "", colorCode: r.colorCode ?? "",
+  colorName: r.colorName ?? "", parties: r.parties.length ? r.parties : [""], requesterName: r.requesterName ?? "",
   processTypeId: r.processTypeId, machineId: r.machineId, newProcess: "", newMachine: "", newMachineP: "",
   fabricProblem: r.fabricProblem ?? "", problemDescription: r.problemDescription ?? "",
   receivedDate: r.receivedDate, dueDate: r.dueDate, isUrgent: r.isUrgent,
@@ -106,6 +107,7 @@ export function DashboardClient(props: {
     return {
       orderType: "PRODUKSI",
       orderNo: "", orderDate: "", spkNo: "", customerName: "", motif: "", colorDirection: "", colorCode: "",
+      colorName: "", parties: [""], requesterName: "",
       processTypeId: "", machineId: "", newProcess: "", newMachine: "", newMachineP: "", fabricProblem: "", problemDescription: "",
       receivedDate: today, dueDate: defaultDueDate(today), isUrgent: false,
     };

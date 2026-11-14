@@ -174,7 +174,7 @@ export function applyFilters(rows: SampleRow[], f: Filters): SampleRow[] {
     if (f.machineId !== "ALL" && r.machineId !== f.machineId) return false;
     if (f.urgency === "URGENT" && !r.isUrgent) return false;
     if ((f.urgency === "LATE" || f.urgency === "WARNING") && r.urgency !== f.urgency) return false;
-    if (q && ![r.spkNo, r.orderNo, r.processName, r.machineName, r.motif, r.colorCode, r.colorDirection, r.problemDescription, r.processorName].some((v) => v?.toLowerCase().includes(q))) return false;
+    if (q && ![r.spkNo, r.orderNo, r.processName, r.machineName, r.motif, r.colorCode, r.colorName, r.colorDirection, r.problemDescription, r.processorName, r.requesterName, r.parties.join(" ")].some((v) => v?.toLowerCase().includes(q))) return false;
     return true; // urutan CR dipertahankan dari server (sortByPriority)
   });
 }
@@ -192,7 +192,7 @@ export function FilterBar({ value, onChange }: { value: Filters; onChange: (f: F
           type="search"
           value={value.q}
           onChange={(e) => set("q", e.target.value)}
-          placeholder="Cari no. order, CM warna, motif, proses, pemroses"
+          placeholder="Cari nomor order, No. CM, warna, partai, pengaju, pemroses"
           aria-label="Cari pengajuan"
           className={`${fieldCls} w-full pl-10`}
         />

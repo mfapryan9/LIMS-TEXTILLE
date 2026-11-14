@@ -4,7 +4,7 @@ import { useMemo, useState } from "react";
 import { BadgeCheck, CheckCircle2, FlaskConical, Inbox, Search, Target, Timer, type LucideIcon } from "lucide-react";
 import { fmtDays, MachineChip, machineTone, type SampleRow } from "./badges";
 import { fieldCls, type MachineGroup } from "./header-parts";
-import { fmtDate, fmtStamp, PhotoLink } from "./SampleTable";
+import { fmtDate, fmtStamp, PartyChips, PhotoLink } from "./SampleTable";
 
 /** Hasil uji yang sudah di-ACC: jumlah uji, ACC di uji ke berapa, durasi dari masuk lab, CR saat order (sama dengan Excel). */
 export function ResultsTable({ rows, groups }: { rows: SampleRow[]; groups: MachineGroup[] }) {
@@ -23,7 +23,7 @@ export function ResultsTable({ rows, groups }: { rows: SampleRow[]; groups: Mach
     const s = q.trim().toLowerCase();
     if (!s) return done;
     return done.filter((r) =>
-      [r.spkNo, r.orderNo, r.processName, r.machineName, r.colorCode, r.motif, r.approverName, r.processorName].some((v) => v?.toLowerCase().includes(s)),
+      [r.spkNo, r.orderNo, r.processName, r.machineName, r.colorCode, r.colorName, r.motif, r.approverName, r.processorName, r.requesterName, r.parties.join(" ")].some((v) => v?.toLowerCase().includes(s)),
     );
   }, [done, q]);
 
@@ -66,7 +66,7 @@ export function ResultsTable({ rows, groups }: { rows: SampleRow[]; groups: Mach
               <tr>
                 <th scope="col" className="px-4 py-3">SPK / Order</th>
                 <th scope="col" className="px-4 py-3">Mesin · Proses</th>
-                <th scope="col" className="whitespace-nowrap px-4 py-3">Masuk lab → ACC</th>
+                <th scope="col" className="whitespace-nowrap px-4 py-3">Diajukan → selesai</th>
                 <th scope="col" className="px-4 py-3 text-right">Durasi</th>
                 <th scope="col" className="whitespace-nowrap px-4 py-3 text-right">Jumlah uji</th>
                 <th scope="col" className="px-4 py-3">Hasil</th>
@@ -79,14 +79,16 @@ export function ResultsTable({ rows, groups }: { rows: SampleRow[]; groups: Mach
                   <td className="px-4 py-4">
                     <p className="font-semibold text-ink">Order {r.orderNo ?? r.spkNo}</p>
                     {r.spkNo !== r.orderNo && <p className="mt-0.5 whitespace-nowrap text-xs text-ink-muted">SPK {r.spkNo}{r.orderDate ? ` · ${fmtDate(r.orderDate)}` : ""}</p>}
-                    {r.colorCode && <p className="text-xs text-ink-muted">Warna {r.colorCode}</p>}
+                    {r.colorCode && <p className="text-xs text-ink-muted">No. CM {r.colorCode}{r.colorName ? ` · ${r.colorName}` : ""}</p>}
+                    {r.parties.length > 0 && <PartyChips parties={r.parties} />}
+                    {r.requesterName && <p className="text-xs text-ink-soft">Pengaju: {r.requesterName}</p>}
                   </td>
                   <td className="px-4 py-4">
                     <MachineChip name={r.machineName} color={r.machineColor} />
                     <p className="mt-1.5 text-ink">{r.processName}</p>
                   </td>
                   <td className="whitespace-nowrap px-4 py-4">
-                    <p className="font-medium text-ink">{fmtDate(r.receivedDate)}</p>
+                    <p className="font-medium text-ink">{fmtStamp(r.createdAt)}</p>
                     <p className="text-xs text-ink-soft">ACC {r.approvedAt ? fmtDate(r.approvedAt) : "–"}</p>
                   </td>
                   <td className="whitespace-nowrap px-4 py-4 text-right font-medium tabular-nums">{fmtDays(r.labDays)}</td>

@@ -147,6 +147,11 @@ model Sample {
   machineId          String
   status             SampleStatus @default(MENUNGGU)
 
+  // Pengajuan PPIC: nama pengaju, nama warna, dan nomor partai (bisa lebih dari satu)
+  requesterName    String?
+  colorName        String?
+  parties          String[]  @default([])
+
   // Sprint 3: pengajuan diproses operator (nama pemroses) lalu diselesaikan dengan foto hasil uji
   processorName    String?
   processStartedAt DateTime?

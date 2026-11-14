@@ -85,6 +85,7 @@ export interface NotifSource {
   urgentAt: string | null; // ISO
   completedAt: string | null; // ISO
   processorName: string | null;
+  requesterName?: string | null;
 }
 
 const DONE_WINDOW_MS = 14 * 24 * 3600 * 1000;
@@ -110,7 +111,7 @@ export function deriveNotifications(rows: NotifSource[], roleCode: string, seenA
         detail: s.status === "DALAM_PROSES" ? `Sedang diproses${s.processorName ? ` oleh ${s.processorName}` : ""}` : `${s.processName} · menunggu diproses`,
       });
     } else if (isLab && s.status === "MENUNGGU") {
-      out.push({ key: `in-${s.id}`, type: "INCOMING", sampleId: s.id, at: created, unread: created > seen, title: `Pengajuan masuk ${label}`, detail: s.processName });
+      out.push({ key: `in-${s.id}`, type: "INCOMING", sampleId: s.id, at: created, unread: created > seen, title: `Pengajuan masuk ${label}`, detail: `${s.processName}${s.requesterName ? ` · diajukan oleh ${s.requesterName}` : ""}` });
     }
 
     if (isPpic && s.status === "DISETUJUI" && s.completedAt) {
