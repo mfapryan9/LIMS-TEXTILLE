@@ -1,5 +1,7 @@
 "use client";
 
+import { REPORT_ROLES } from "@/lib/roles";
+
 import { useMemo, useState, useTransition, type FormEvent } from "react";
 import { KeyRound, Loader2, Pencil, Search, ShieldCheck, UserPlus, Users } from "lucide-react";
 import type { NewUserInput, UpdateUserInput, UserFormResult } from "@/lib/user-input";
@@ -36,15 +38,16 @@ export interface UserAdmin {
 
 /** Ringkasan hak akses peran, sesuai aturan di lib/roles.ts. */
 export function roleAccess(r: RoleOption): { label: string; tone: string; text: string } {
+  const report = REPORT_ROLES.includes(r.code) ? ", melihat laporan kinerja" : ", tanpa laporan kinerja";
   if (r.viewMode === "OPERATOR")
-    return { label: "Operator lab", tone: "bg-sky-50 text-sky-800 ring-sky-200", text: "Memproses pengajuan lab dan melampirkan foto hasil uji" };
+    return { label: "Operasional lab", tone: "bg-sky-50 text-sky-800 ring-sky-200", text: `Memproses pengajuan, foto hasil uji, validasi edit/hapus, urutan urgent${report}` };
   if (r.canEditSample)
-    return { label: "Pengaju (PPIC)", tone: "bg-amber-50 text-amber-800 ring-amber-200", text: "Mengajukan sampel ke lab, termasuk urgent" };
+    return { label: "Operasional PPIC", tone: "bg-amber-50 text-amber-800 ring-amber-200", text: `Mengajukan sampel ke lab (termasuk urgent), minta edit/hapus${report}` };
   if (r.canInterveneUrgent)
     return {
       label: r.canManageUsers ? "Kepala + kelola pengguna" : "Kepala (monitoring)",
       tone: "bg-emerald-50 text-emerald-800 ring-emerald-200",
-      text: r.canManageUsers ? "Monitoring, membatalkan urgent, dan kelola akun pengguna" : "Monitoring dan dapat membatalkan urgent",
+      text: r.canManageUsers ? "Monitoring, laporan kinerja, membatalkan urgent, dan kelola akun pengguna" : "Monitoring, laporan kinerja, dan membatalkan urgent",
     };
   return { label: "Monitor", tone: "bg-stone-100 text-stone-700 ring-stone-300", text: "Hanya pantau pengajuan & hasil uji" };
 }
@@ -193,7 +196,7 @@ function UserDialog({ roles, user, isMe = false, onSubmit, onClose }: {
         {!edit && (
           <label className="block text-sm">
             <span className="mb-1.5 block font-medium text-ink">Username</span>
-            <input value={username} onChange={(e) => setUsername(e.target.value.toLowerCase().replace(/\s/g, ""))} autoFocus autoComplete="off" placeholder="mis. operator.lab2" className={`${inputCls} font-mono`} />
+            <input value={username} onChange={(e) => setUsername(e.target.value.toLowerCase().replace(/\s/g, ""))} autoFocus autoComplete="off" placeholder="mis. admin.lab2" className={`${inputCls} font-mono`} />
             <span className="mt-1 block text-xs text-ink-soft">Huruf kecil, angka, titik, garis bawah, atau strip. Tidak bisa diubah setelah dibuat.</span>
           </label>
         )}
@@ -208,7 +211,7 @@ function UserDialog({ roles, user, isMe = false, onSubmit, onClose }: {
             {(["PLANNER", "OPERATOR", "MONITOR", "APPROVER"] as const).map((vm) => {
               const list = roles.filter((r) => r.viewMode === vm);
               if (!list.length) return null;
-              const label = { OPERATOR: "Operator lab (proses pengajuan)", APPROVER: "Approver", MONITOR: "Kepala / monitoring", PLANNER: "PPIC (pengaju)" }[vm];
+              const label = { OPERATOR: "Operasional lab", APPROVER: "Approver", MONITOR: "Kepala / monitoring", PLANNER: "Operasional PPIC" }[vm];
               return <optgroup key={vm} label={label}>{list.map((r) => <option key={r.id} value={r.id}>{r.name}</option>)}</optgroup>;
             })}
           </select>

@@ -18,28 +18,31 @@ export interface SessionUser {
 }
 
 /**
- * Seed untuk tabel roles (alur Sprint 3).
- * - PPIC: satu-satunya yang mengajukan sampel ke lab (boleh urgent) dan mengedit pengajuan yang belum diproses.
- * - Operator Lab: memproses pengajuan (isi nama pemroses) lalu menyelesaikannya dengan foto hasil uji.
- * - Seluruh kepala: monitoring + dapat mengintervensi (membatalkan) urgent. Kepala Laboratorium juga mengelola akun.
+ * Seed untuk tabel roles (aktor Sprint 4).
+ * - Kepala Produksi DF, Kepala PPIC, Kepala Laboratorium: memantau, melihat laporan kinerja, dan mengintervensi
+ *   (membatalkan) urgent. Kepala Laboratorium juga mengelola akun.
+ * - Kepala Seksi PPIC & Kepala Urusan PPIC: mengoperasikan sisi PPIC (mengajukan ke lab, minta edit/hapus) + laporan kinerja.
+ * - Kepala Seksi Laboratorium: mengoperasikan sisi lab (proses, selesai + foto, validasi, urutan urgent) + laporan kinerja.
+ * - Admin Lab: mengoperasikan sisi lab, tanpa laporan kinerja.
  */
 export const ROLE_SEED = [
-  { code: "PPIC", name: "PPIC", viewMode: "PLANNER", canEditSample: true, canEditDue: true, canMarkUrgent: true },
-  { code: "OPERATOR_LAB", name: "Operator Lab", viewMode: "OPERATOR" },
-  { code: "KALAB", name: "Kepala Laboratorium", viewMode: "MONITOR", canInterveneUrgent: true, canManageUsers: true },
   { code: "KEPALA_PRODUKSI_DF", name: "Kepala Produksi DF", viewMode: "MONITOR", canInterveneUrgent: true },
   { code: "KEPALA_PPIC", name: "Kepala PPIC", viewMode: "MONITOR", canInterveneUrgent: true },
-  { code: "KAUR_LAB", name: "Kepala Urusan Laboratorium", viewMode: "MONITOR", canInterveneUrgent: true },
-  { code: "KASI", name: "Kepala Seksi", viewMode: "MONITOR", canInterveneUrgent: true },
-  { code: "ADMIN", name: "Admin Sistem", viewMode: "MONITOR" },
+  { code: "KALAB", name: "Kepala Laboratorium", viewMode: "MONITOR", canInterveneUrgent: true, canManageUsers: true },
+  { code: "KASI_PPIC", name: "Kepala Seksi PPIC", viewMode: "PLANNER", canEditSample: true, canEditDue: true, canMarkUrgent: true },
+  { code: "KAUR_PPIC", name: "Kepala Urusan PPIC", viewMode: "PLANNER", canEditSample: true, canEditDue: true, canMarkUrgent: true },
+  { code: "KASI_LAB", name: "Kepala Seksi Laboratorium", viewMode: "OPERATOR" },
+  { code: "ADMIN_LAB", name: "Admin Lab", viewMode: "OPERATOR" },
 ] as const;
 
-/** Peran yang berada di laboratorium: menerima notifikasi pengajuan masuk & urgent. */
-export const LAB_ROLES = ["OPERATOR_LAB", "KALAB", "KAUR_LAB", "KASI"];
-/** Laporan kinerja: PPIC dan seluruh kepala (operator & admin tidak). */
-export const REPORT_ROLES = ["PPIC", "KALAB", "KAUR_LAB", "KASI", "KEPALA_PPIC", "KEPALA_PRODUKSI_DF"];
-/** Kepala yang menerima notifikasi setiap pengajuan urgent. */
-export const URGENT_WATCH_ROLES = ["KEPALA_PPIC", "KEPALA_PRODUKSI_DF"];
+/** Operasional lab: notifikasi pengajuan masuk/urgent/validasi, memproses, memvalidasi edit/hapus, mengatur urutan urgent. */
+export const LAB_ROLES = ["ADMIN_LAB", "KASI_LAB"];
+/** Operasional PPIC: mengajukan ke lab; notifikasi pengajuan selesai & hasil validasi. */
+export const PPIC_ROLES = ["KASI_PPIC", "KAUR_PPIC"];
+/** Laporan kinerja: seluruh kepala, Kasi & Kaur PPIC, Kasi Lab (Admin Lab tidak). */
+export const REPORT_ROLES = ["KEPALA_PRODUKSI_DF", "KEPALA_PPIC", "KALAB", "KASI_PPIC", "KAUR_PPIC", "KASI_LAB"];
+/** Kepala yang menerima notifikasi setiap pengajuan urgent (dan dapat mengintervensinya). */
+export const URGENT_WATCH_ROLES = ["KEPALA_PPIC", "KEPALA_PRODUKSI_DF", "KALAB"];
 
 /** Status yang relevan per tampilan (tab default di dashboard). */
 export const VIEW_DEFAULT_STATUSES: Record<ViewMode, string[] | "ALL"> = {
@@ -123,7 +126,7 @@ export function deriveNotifications(rows: NotifSource[], roleCode: string, seenA
   const seen = seenAt ? new Date(seenAt).getTime() : 0;
   const isLab = LAB_ROLES.includes(roleCode);
   const watchUrgent = isLab || URGENT_WATCH_ROLES.includes(roleCode);
-  const isPpic = roleCode === "PPIC";
+  const isPpic = PPIC_ROLES.includes(roleCode);
   const out: (Notif & { at: number })[] = [];
 
   for (const s of rows) {

@@ -89,8 +89,8 @@ async function main() {
     return;
   }
 
-  const op = users.OPERATOR_LAB;
-  const ppic = users.PPIC; // Sprint 3: pengajuan ke lab hanya oleh PPIC
+  const op = users.ADMIN_LAB;
+  const ppic = users.KAUR_PPIC; // pengajuan ke lab oleh PPIC (Kasi / Kaur PPIC)
   const kalab = users.KALAB; // approver riwayat: Kepala Laboratorium
   const kadf = users.KEPALA_PRODUKSI_DF; // approver: Kepala Produksi DF
 

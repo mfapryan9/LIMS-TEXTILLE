@@ -30,7 +30,7 @@ export function LoginForm() {
         <span className="mb-1.5 block font-medium text-ink">Username</span>
         <span className="relative block">
           <User className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-soft" aria-hidden />
-          <input type="text" required autoComplete="username" autoCapitalize="none" spellCheck={false} value={username} onChange={(e) => setUsername(e.target.value)} placeholder="mis. operator.lab" className={field} />
+          <input type="text" required autoComplete="username" autoCapitalize="none" spellCheck={false} value={username} onChange={(e) => setUsername(e.target.value)} placeholder="mis. admin.lab" className={field} />
         </span>
       </label>
       <label className="block text-sm">

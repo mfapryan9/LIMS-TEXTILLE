@@ -23,14 +23,15 @@ prisma/seed.ts            role, akun, master dari Excel, riwayat Excel, contoh a
 
 Login memakai **username**. Password awal akun hasil seed: `lims12345` (atau `SEED_PASSWORD`).
 
-| Username | Peran | Hak (alur Sprint 4) |
+| Username | Peran | Hak (aktor Sprint 4) |
 |---|---|---|
-| ppic | Pengaju | **Satu-satunya** yang mengajukan sampel ke lab: nama pengaju, customer, Nomor Order, No. CM, warna, partai, proses, due date, deskripsi, pilihan urgent (bisa scan kartu SPK). **Edit / Hapus** pengajuan berupa permintaan yang baru berlaku setelah divalidasi lab. Notifikasi: pengajuan selesai + hasil validasi |
-| operator.lab | Operator lab | Klik **Proses** lalu pilih **grup pemroses**, kemudian **Selesai** dengan foto hasil uji (resep). Validasi edit/hapus dari PPIC, atur urutan urgent (naik/turun/paling atas). Notifikasi: pengajuan masuk, urgent, validasi |
-| kalab | Kepala Laboratorium | Monitoring, batalkan urgent, validasi edit/hapus, atur urutan urgent, menu **Kelola pengguna** |
-| kepala.ppic, kepala.produksi.df | Kepala | Monitoring + batalkan urgent. Notifikasi setiap pengajuan urgent |
-| kaur.lab, kasi | Kepala lab | Monitoring, batalkan urgent, validasi edit/hapus, atur urutan urgent |
-| admin | Monitor | Hanya pantau |
+| kepala.produksi.df | Kepala Produksi DF | Memantau, laporan kinerja, intervensi (batalkan) urgent. Notifikasi urgent |
+| kepala.ppic | Kepala PPIC | Memantau, laporan kinerja, intervensi (batalkan) urgent. Notifikasi urgent |
+| kalab | Kepala Laboratorium | Memantau, laporan kinerja, intervensi (batalkan) urgent, **Kelola pengguna**. Notifikasi urgent |
+| kasi.ppic | Kepala Seksi PPIC | Mengoperasikan PPIC: mengajukan ke lab (termasuk urgent, scan SPK), minta edit/hapus + laporan kinerja |
+| kaur.ppic | Kepala Urusan PPIC | Mengoperasikan PPIC (sama dengan Kasi PPIC) + laporan kinerja |
+| kasi.lab | Kepala Seksi Laboratorium | Mengoperasikan lab: Proses (pilih grup), Selesai + foto, validasi edit/hapus, urutan urgent + laporan kinerja |
+| admin.lab | Admin Lab | Mengoperasikan lab (sama dengan Kasi Lab), **tanpa** laporan kinerja |
 
 Grup pemroses: ALNI, ATYKAH, SELA · ALFATH, KASIM, NOPAL · PIO, NURJANAH, JELYN · RAHMA, SYIFA, CAHYONO (`lib/processors.ts`).
 

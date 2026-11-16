@@ -60,7 +60,7 @@ export function DashboardClient(props: {
   const canEdit = !!editor && user.canEditSample;
   const showResults = user.viewMode !== "OPERATOR";
   const showUsers = !!userAdmin && user.canManageUsers;
-  const showReport = REPORT_ROLES.includes(user.roleCode); // PPIC & kepala; operator tidak
+  const showReport = REPORT_ROLES.includes(user.roleCode); // kepala, Kasi/Kaur PPIC, Kasi Lab; Admin Lab tidak
   const [tab, setTab] = useState<"queue" | "results" | "report" | "users">("queue");
   const [pwOpen, setPwOpen] = useState(false);
   const pageTitle = tab === "results" ? "Hasil uji selesai" : tab === "report" ? "Laporan kinerja" : tab === "users" ? "Kelola pengguna" : copy.title;

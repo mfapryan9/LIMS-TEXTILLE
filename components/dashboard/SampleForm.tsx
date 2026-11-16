@@ -424,7 +424,7 @@ export function SampleForm(props: {
                   </span>
                   <span className="text-sm">
                     <span className={`flex items-center gap-1 font-semibold ${values.isUrgent ? "text-fuchsia-700" : "text-ink"}`}><Zap className="h-4 w-4" aria-hidden /> Tandai URGENT</span>
-                    <span className="block text-xs text-ink-muted">Langsung paling atas di antrean lab dan notifikasi dikirim ke Kepala PPIC & Kepala Produksi DF.</span>
+                    <span className="block text-xs text-ink-muted">Langsung paling atas di antrean lab dan notifikasi dikirim ke Kepala PPIC, Kepala Produksi DF & Kepala Laboratorium.</span>
                   </span>
                 </label>
               )}
