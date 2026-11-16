@@ -1,6 +1,6 @@
 import Image from "next/image";
 import { redirect } from "next/navigation";
-import { CheckCircle2, Gauge, ScanLine } from "lucide-react";
+import { BarChart3, Camera, Gauge, ScanLine, Zap } from "lucide-react";
 import { findSessionUser } from "@/lib/auth";
 import { LoginForm } from "./LoginForm";
 
@@ -8,8 +8,10 @@ export const dynamic = "force-dynamic";
 
 const FEATURES = [
   { icon: Gauge, title: "Prioritas Critical Ratio", text: "Antrean otomatis berdasarkan CR hari ini per kelompok mesin." },
-  { icon: ScanLine, title: "Scan Kartu SPK", text: "Foto SPK, kolom terisi otomatis, tinggal periksa dan simpan." },
-  { icon: CheckCircle2, title: "Riwayat Uji & ACC", text: "Lihat uji ke berapa yang di-ACC dan durasinya di lab." },
+  { icon: Zap, title: "Pengajuan PPIC & Urgent", text: "PPIC mengajukan ke lab; urgent langsung teratas dan dipantau kepala." },
+  { icon: ScanLine, title: "Scan/Upload Permintaan Pengujian", text: "Foto atau PDF permintaan pengujian, kolom terisi otomatis lalu tinggal diperiksa." },
+  { icon: Camera, title: "Foto Hasil Uji", text: "Lab memproses per grup dan menyelesaikan dengan foto resep hasil uji." },
+  { icon: BarChart3, title: "Laporan Kinerja & Excel", text: "Rekap kinerja lab per rentang tanggal dan unduh data ke Excel." },
 ];
 
 /** Wordmark nama aplikasi: "Dye" putih/marun, "LIMS" emas. */
@@ -51,7 +53,7 @@ export default async function LoginPage() {
           <p className="mt-6 text-2xl font-bold leading-snug tracking-tight">
             Jadwal uji warna yang <span className="text-accent-200">tepat waktu</span>, setiap hari.
           </p>
-          <ul className="mt-8 space-y-5">
+          <ul className="mt-8 space-y-4">
             {FEATURES.map(({ icon: Icon, title, text }) => (
               <li key={title} className="flex gap-4">
                 <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white/10 ring-1 ring-white/15">
@@ -81,7 +83,7 @@ export default async function LoginPage() {
           <div aria-hidden className="mt-4 h-1 w-10 rounded-full bg-accent" />
 
           <h2 className="mt-8 text-3xl font-bold tracking-tight text-ink">Selamat Datang</h2>
-          <p className="mb-8 mt-2 text-sm text-ink-muted">Masuk dengan username dan password yang diberikan admin.</p>
+          <p className="mb-8 mt-2 text-sm text-ink-muted">Masuk dengan username dan password yang diberikan Kepala Laboratorium.</p>
           <LoginForm />
         </div>
       </section>
