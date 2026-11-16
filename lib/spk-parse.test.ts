@@ -131,3 +131,30 @@ describe("parseSpkText: kartu pengajuan (Nomor Order, No. CM, Warna, Partai, Nam
     expect(found).toContain("parties");
   });
 });
+
+describe("parseSpkText: permintaan pengujian dari PDF (label & nilai satu baris berkolom)", () => {
+  it("membaca tabel label | nilai", () => {
+    const text = [
+      "PERMINTAAN PENGUJIAN LAB",
+      "Nama Pengaju    Rina Wulandari",
+      "Customer    PT Contoh Tekstil",
+      "Nomor Order    26-5001",
+      "No. CM    CM-14102/2",
+      "Warna    Navy Blue",
+      "Motif    tr62",
+      "Partai    P-01, P-02",
+      "Due Date    25/11/2026",
+      "Deskripsi Order    Kebutuhan buyer ekspor, 2 partai",
+      "Deskripsi Warna    Sedikit lebih gelap dari standar",
+    ].join("\n");
+    // kop "Laboratorium Color Matching" tidak boleh ditebak sebagai proses MATCHING RF
+    const header = parseSpkText(`PT. Nagasakti · Laboratorium Color Matching\n${text}`, { processTypes: [{ id: "mrf", name: "MATCHING RF (LAB)" }], machines: [] });
+    expect(header.draft.processTypeId).toBeUndefined();
+    const { draft } = parseSpkText(text, { processTypes: [], machines: [] });
+    expect(draft).toMatchObject({
+      requesterName: "Rina Wulandari", customerName: "PT Contoh Tekstil", orderNo: "26-5001", colorCode: "14102/2",
+      colorName: "Navy Blue", motif: "TR-62", parties: ["P-01", "P-02"], dueDate: "2026-11-25",
+      problemDescription: "Kebutuhan buyer ekspor, 2 partai", colorDirection: "Sedikit lebih gelap dari standar",
+    });
+  });
+});

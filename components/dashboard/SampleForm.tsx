@@ -6,6 +6,7 @@ import { defaultDueDate } from "@/lib/cr";
 import type { SampleFormResult, SampleInput, SampleTextField } from "@/lib/sample-input";
 import { parseSpkText, type SpkField } from "@/lib/spk-parse";
 import { normalizeCm, normalizeMotif } from "@/lib/codes";
+import { isPdf, readPdf } from "@/lib/pdf-read";
 
 type Option = { id: string; name: string };
 
@@ -31,17 +32,26 @@ async function prepareImage(src: Blob | HTMLCanvasElement): Promise<HTMLCanvasEl
   return canvas;
 }
 
-async function runOcr(canvas: HTMLCanvasElement, onProgress: (p: number, label: string) => void): Promise<string> {
+/**
+ * OCR satu atau beberapa halaman. psm "6" = satu blok teks (bawaan, cocok untuk kartu SPK),
+ * psm "11" = teks tersebar (cocok untuk formulir berbentuk tabel).
+ */
+async function runOcr(pages: HTMLCanvasElement[], psm: "6" | "11", onProgress: (p: number, label: string) => void): Promise<string> {
   const { createWorker } = await import("tesseract.js");
+  let page = 0;
+  const n = pages.length;
   const worker = await createWorker("ind+eng", 1, {
     logger: (m: { status: string; progress: number }) => {
-      const label = m.status.startsWith("recognizing") ? "Membaca teks" : "Menyiapkan pembaca (sekali di awal)";
-      onProgress(m.progress, label);
+      const reading = m.status.startsWith("recognizing");
+      const label = reading ? (psm === "11" ? "Membaca ulang (mode tabel)" : "Membaca teks") : "Menyiapkan pembaca (sekali di awal)";
+      onProgress(reading ? (page + m.progress) / n : m.progress, n > 1 && reading ? `${label} (halaman ${page + 1}/${n})` : label);
     },
   });
   try {
-    const { data } = await worker.recognize(canvas);
-    return data.text;
+    await worker.setParameters({ tessedit_pageseg_mode: psm as never });
+    const texts: string[] = [];
+    for (page = 0; page < n; page++) texts.push((await worker.recognize(pages[page])).data.text);
+    return texts.join("\n");
   } finally {
     await worker.terminate();
   }
@@ -85,7 +95,7 @@ function LiveCamera({ onCapture, onCancel }: { onCapture: (c: HTMLCanvasElement)
           <video ref={video} autoPlay playsInline muted className="aspect-[4/3] w-full object-contain" />
         </div>
       )}
-      <p className="text-xs text-ink-muted">Posisikan seluruh lembar SPK di dalam bingkai, tegak lurus, dengan cahaya cukup.</p>
+      <p className="text-xs text-ink-muted">Posisikan seluruh lembar permintaan pengujian di dalam bingkai, tegak lurus, dengan cahaya cukup.</p>
       <div className="flex gap-2">
         {!error && <button type="button" onClick={capture} className={primaryBtn}><Camera className="h-4 w-4" aria-hidden />Ambil foto</button>}
         <button type="button" onClick={onCancel} className={ghostBtn}>Batal</button>
@@ -100,7 +110,7 @@ const primaryBtn = "inline-flex items-center justify-center gap-2 rounded-xl bg-
 const ghostBtn = "inline-flex items-center justify-center gap-2 rounded-xl bg-white px-4 py-2.5 text-sm font-semibold text-ink ring-1 ring-line transition hover:bg-canvas focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand-600 disabled:opacity-50";
 const fieldCls = "w-full rounded-xl border bg-white px-3.5 py-2.5 text-sm text-ink placeholder:text-ink-soft transition focus-visible:border-brand-500 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-brand-100";
 
-/** Label + penanda "dari foto" untuk kolom yang diisi OCR. Di luar SampleForm agar input tidak di-mount ulang tiap ketikan. */
+/** Label + penanda "dari scan" untuk kolom yang diisi dari foto / PDF. Di luar SampleForm agar input tidak di-mount ulang tiap ketikan. */
 function Field({ fromPhoto, label, children, hint }: { fromPhoto: boolean; label: string; children: ReactNode; hint?: string }) {
   return (
     <label className="block text-sm">
@@ -108,7 +118,7 @@ function Field({ fromPhoto, label, children, hint }: { fromPhoto: boolean; label
         {label}
         {fromPhoto && (
           <span className="inline-flex items-center gap-1 rounded-full bg-brand-100 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-brand-800">
-            <Sparkles className="h-3 w-3" aria-hidden /> dari foto
+            <Sparkles className="h-3 w-3" aria-hidden /> dari scan
           </span>
         )}
       </span>
@@ -193,12 +203,39 @@ export function SampleForm(props: {
     setCamera(false);
     setError(null);
     setNotice(null);
-    setOcr({ state: "running", progress: 0, label: "Menyiapkan gambar", text: "" });
+    const pdf = src instanceof File && isPdf(src);
+    setOcr({ state: "running", progress: 0, label: pdf ? "Membaca PDF" : "Menyiapkan gambar", text: "" });
     try {
-      const canvas = await prepareImage(src);
-      setPreview(canvas.toDataURL("image/jpeg", 0.8));
-      const text = await runOcr(canvas, (progress, label) => setOcr((o) => ({ ...o, progress, label })));
-      const { draft, found: f } = parseSpkText(text, { processTypes, machines });
+      let text = "";
+      let pages: HTMLCanvasElement[] = [];
+      if (pdf) {
+        // PDF digital: teks diambil langsung; PDF hasil scan: tiap halaman (maks. 3) dibaca OCR
+        const doc = await readPdf(src as File);
+        if (!doc.pages.length) throw new Error("PDF kosong");
+        setPreview(doc.pages[0].toDataURL("image/jpeg", 0.8));
+        if (doc.text) text = doc.text;
+        else for (const pg of doc.pages) pages.push(await prepareImage(pg));
+      } else {
+        const canvas = await prepareImage(src);
+        setPreview(canvas.toDataURL("image/jpeg", 0.8));
+        pages = [canvas];
+      }
+      const progress = (p: number, label: string) => setOcr((o) => ({ ...o, progress: p, label }));
+      let parsed = parseSpkText(text, { processTypes, machines });
+      if (pages.length) {
+        text = await runOcr(pages, "6", progress);
+        parsed = parseSpkText(text, { processTypes, machines });
+        // Sedikit kolom terbaca (mis. formulir tabel) → baca ulang dengan mode teks tersebar, pakai hasil yang lebih lengkap
+        if (parsed.found.length < 3) {
+          const retry = await runOcr(pages, "11", progress);
+          const again = parseSpkText(retry, { processTypes, machines });
+          if (again.found.length > parsed.found.length) {
+            text = retry;
+            parsed = again;
+          }
+        }
+      }
+      const { draft, found: f } = parsed;
       setValues((prev) => {
         const next = { ...prev };
         for (const k of f) (next as unknown as Record<string, string>)[k] = draft[k] as string;
@@ -211,11 +248,13 @@ export function SampleForm(props: {
       if (f.includes("processTypeId" as SpkField)) setAddProcess(false);
       setFound(new Set(f));
       setOcr({ state: "done", progress: 1, label: "", text });
-      setNotice(f.length ? `${f.length} kolom terisi dari foto. Periksa kembali sebelum menyimpan.` : "Teks terbaca, tetapi tidak ada kolom yang dikenali. Isi form secara manual.");
+      setNotice(f.length ? `${f.length} kolom terisi dari ${pdf ? "PDF" : "foto"}. Periksa kembali sebelum menyimpan.` : "Teks terbaca, tetapi tidak ada kolom yang dikenali. Isi form secara manual.");
     } catch (e) {
       console.error(e);
       setOcr({ state: "error", progress: 0, label: "", text: "" });
-      setError("Foto gagal dibaca. Pastikan koneksi internet aktif (data bahasa OCR diunduh saat pertama kali) lalu coba lagi.");
+      setError(pdf
+        ? "PDF gagal dibaca. Pastikan file tidak rusak atau terkunci password, lalu coba lagi."
+        : "Foto gagal dibaca. Pastikan koneksi internet aktif (data bahasa OCR diunduh saat pertama kali) lalu coba lagi.");
     }
   }
 
@@ -252,7 +291,7 @@ export function SampleForm(props: {
             </span>
             <div>
               <h2 className="text-lg font-bold text-ink">{mode === "create" ? "Ajukan ke Lab" : `Edit pengajuan order ${props.initial.orderNo || props.initial.spkNo}`}</h2>
-              <p className="text-xs text-ink-muted">{mode === "create" ? "Isi data pengajuan atau foto kartu SPK untuk mengisi otomatis, lalu periksa sebelum mengirim." : "Perubahan dikirim ke bagian lab dan baru berlaku setelah divalidasi. Semua perubahan dicatat di audit log."}</p>
+              <p className="text-xs text-ink-muted">{mode === "create" ? "Isi data pengajuan, atau scan / upload permintaan pengujian (foto atau PDF) untuk mengisi otomatis, lalu periksa sebelum mengirim." : "Perubahan dikirim ke bagian lab dan baru berlaku setelah divalidasi. Semua perubahan dicatat di audit log."}</p>
             </div>
           </div>
           <button type="button" onClick={onClose} className="rounded-xl p-2 text-ink-soft transition hover:bg-canvas hover:text-ink" aria-label="Tutup">
@@ -263,7 +302,7 @@ export function SampleForm(props: {
         <div className="grid flex-1 gap-6 overflow-y-auto p-6 md:grid-cols-[minmax(0,19rem)_minmax(0,1fr)]">
           {/* Panel foto SPK */}
           <section className="space-y-3">
-            <p className="text-sm font-semibold text-ink">Foto kartu SPK</p>
+            <p className="text-sm font-semibold text-ink">Scan/Upload Permintaan Pengujian</p>
             {camera ? (
               <LiveCamera onCapture={scan} onCancel={() => setCamera(false)} />
             ) : (
@@ -271,12 +310,12 @@ export function SampleForm(props: {
                 <div className={`relative flex aspect-[3/4] items-center justify-center overflow-hidden rounded-2xl ${preview ? "bg-canvas ring-1 ring-line" : "border-2 border-dashed border-brand-200 bg-brand-50/40"}`}>
                   {preview ? (
                     // eslint-disable-next-line @next/next/no-img-element
-                    <img src={preview} alt="Foto SPK" className="h-full w-full object-contain" />
+                    <img src={preview} alt="Permintaan pengujian" className="h-full w-full object-contain" />
                   ) : (
                     <div className="px-6 text-center">
                       <span className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-white text-brand-600 shadow-card"><Camera className="h-7 w-7" aria-hidden /></span>
-                      <p className="mt-3 text-sm font-semibold text-ink">Scan kartu SPK</p>
-                      <p className="mt-1 text-xs text-ink-soft">Kolom di samping terisi otomatis dan tetap bisa diedit.</p>
+                      <p className="mt-3 text-sm font-semibold text-ink">Scan / upload permintaan pengujian</p>
+                      <p className="mt-1 text-xs text-ink-soft">Foto (JPG/PNG) atau PDF. Kolom di samping terisi otomatis dan tetap bisa diedit.</p>
                     </div>
                   )}
                   {ocr.state === "running" && (
@@ -296,13 +335,13 @@ export function SampleForm(props: {
                   </button>
                   <label className={`${ghostBtn} cursor-pointer`}>
                     <Upload className="h-4 w-4" aria-hidden /> Unggah
-                    <input type="file" accept="image/*" capture="environment" className="sr-only" disabled={ocr.state === "running"}
+                    <input type="file" accept="image/*,application/pdf,.pdf" className="sr-only" disabled={ocr.state === "running"}
                       onChange={(e) => { const f = e.target.files?.[0]; e.target.value = ""; if (f) scan(f); }} />
                   </label>
                 </div>
                 {ocr.state === "done" && ocr.text && (
                   <details className="rounded-xl bg-canvas px-3.5 py-2.5 text-xs text-ink-muted ring-1 ring-line">
-                    <summary className="cursor-pointer font-semibold text-ink">Teks terbaca dari foto</summary>
+                    <summary className="cursor-pointer font-semibold text-ink">Teks terbaca dari dokumen</summary>
                     <pre className="mt-2 max-h-48 overflow-auto whitespace-pre-wrap font-mono text-[11px] leading-relaxed">{ocr.text.trim()}</pre>
                   </details>
                 )}
@@ -334,7 +373,7 @@ export function SampleForm(props: {
                   <span className="text-xs font-normal text-ink-soft">{values.parties.filter((p) => p.trim()).length} terisi</span>
                   {found.has("parties" as SpkField) && (
                     <span className="inline-flex items-center gap-1 rounded-full bg-brand-100 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-brand-800">
-                      <Sparkles className="h-3 w-3" aria-hidden /> dari foto
+                      <Sparkles className="h-3 w-3" aria-hidden /> dari scan
                     </span>
                   )}
                 </span>

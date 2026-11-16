@@ -153,6 +153,23 @@ export function matchOption(value: string, options: Option[]): string | undefine
   return best?.id;
 }
 
+/** Untuk tebakan dari seluruh teks (tanpa label): semua kata nama opsi harus muncul, agar kop surat
+ * seperti "Laboratorium Color Matching" tidak dianggap proses "MATCHING RF". */
+function matchOptionInText(text: string, options: Option[]): string | undefined {
+  const v = tokens(text);
+  const full = options.filter((o) => {
+    const ot = tokens(o.name);
+    return ot.length > 0 && ot.every((t) => v.includes(t));
+  });
+  return full.sort((a, b) => tokens(b.name).length - tokens(a.name).length)[0]?.id;
+}
+
+/** Kode mesin (mis. "JD-01") di mana saja dalam teks, termasuk tanpa tanda hubung. */
+function matchMachineCode(text: string, options: Option[]): string | undefined {
+  const compact = text.toLowerCase().replace(/[^a-z0-9]/g, "");
+  return options.find((o) => (o.name.match(/[A-Za-z]+-?\d+/g) ?? []).some((t) => compact.includes(t.toLowerCase().replace("-", ""))))?.id;
+}
+
 function splitSegments(line: string): string[] {
   // Beberapa field dalam satu baris dipisah spasi lebar / garis tabel
   return line.split(/\s{3,}|\t|\s\|\s/).map((s) => s.trim()).filter(Boolean);
@@ -184,10 +201,13 @@ export function parseSpkText(
   const lines = text.split(/\r?\n/).map((l) => l.trim()).filter(Boolean);
 
   for (let i = 0; i < lines.length; i++) {
-    for (const seg of splitSegments(lines[i])) {
-      const hit = matchLabel(seg);
+    const segs = splitSegments(lines[i]);
+    for (let j = 0; j < segs.length; j++) {
+      const hit = matchLabel(segs[j]);
       if (!hit) continue;
       let value = hit.value;
+      // Tabel (PDF / formulir): label dan nilai di kolom bersebelahan pada baris yang sama
+      if (!value && j + 1 < segs.length && !matchLabel(segs[j + 1])) value = clean(segs[++j]);
       if (!value && i + 1 < lines.length && !matchLabel(lines[i + 1])) value = clean(lines[i + 1]);
       if (!value) continue;
 
@@ -226,8 +246,8 @@ export function parseSpkText(
     if (/\bmarketing\b/i.test(text)) set("orderType", "MARKETING");
     else if (/\bproduksi\b/i.test(text)) set("orderType", "PRODUKSI");
   }
-  if (!draft.processTypeId) set("processTypeId", matchOption(text, masters.processTypes));
-  if (!draft.machineId) set("machineId", matchOption(text, masters.machines));
+  if (!draft.processTypeId) set("processTypeId", matchOptionInText(text, masters.processTypes));
+  if (!draft.machineId) set("machineId", matchOptionInText(text, masters.machines) ?? matchMachineCode(text, masters.machines));
   if (!draft.receivedDate || !draft.dueDate) {
     const dates = allDates(text).filter((d) => d !== draft.receivedDate && d !== draft.dueDate && d !== draft.orderDate).sort();
     if (!draft.receivedDate && dates.length) set("receivedDate", dates.shift());
