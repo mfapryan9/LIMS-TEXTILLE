@@ -1,12 +1,13 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { ArrowDown, ArrowUp, Check, CheckCircle2, ChevronsUp, Hourglass, ImageIcon, Inbox, Pencil, Play, ShieldCheck, Timer, Trash2, UserRound, Users, X, ZapOff } from "lucide-react";
+import { ArrowDown, ArrowUp, Check, CheckCircle2, ChevronsUp, Hourglass, Inbox, Pencil, Play, ShieldCheck, Timer, Trash2, UserRound, Users, X, ZapOff } from "lucide-react";
 import { isLabRole, type SessionUser } from "@/lib/roles";
 import { PROCESSOR_GROUP_NAMES } from "@/lib/processors";
 import { fmtHours } from "@/lib/report";
 import { CrBadge, MachineChip, StatusBadge, UrgentBadge, fmtDays, rowAccent, type SampleRow } from "./badges";
 import { FinishDialog } from "./FinishDialog";
+import { PhotoLink } from "./PhotoViewer";
 
 type Result = { ok: true } | { ok: false; error: string };
 
@@ -249,14 +250,7 @@ export function PartyChips({ parties }: { parties: string[] }) {
   );
 }
 
-/** Link foto hasil uji (dibuka di tab baru). */
-export function PhotoLink({ id }: { id: string }) {
-  return (
-    <a href={`/hasil/${id}`} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-xs font-semibold text-brand-700 hover:underline">
-      <ImageIcon className="h-3.5 w-3.5" aria-hidden /> Lihat foto hasil uji
-    </a>
-  );
-}
+export { PhotoLink };
 
 /** Siapa yang memproses, kapan selesai, dan lampiran hasil uji: tampil sama untuk semua user. */
 export function ProcessInfo({ r }: { r: SampleRow }) {
@@ -269,7 +263,7 @@ export function ProcessInfo({ r }: { r: SampleRow }) {
           {r.completedAt ? ` · ${fmtStamp(r.completedAt)}` : ""}
         </p>
         <p className="inline-flex items-center gap-1 text-ink-soft"><Timer className="h-3.5 w-3.5" aria-hidden />Selesai dalam {r.completedAt ? fmtHours(doneHours(r)) : fmtDays(r.labDays)}</p>
-        {r.hasPhoto && <p><PhotoLink id={r.id} /></p>}
+        {r.hasPhoto && <p><PhotoLink id={r.id} label={`Order ${r.orderNo ?? r.spkNo}`} /></p>}
         {r.resultNote && <p className="text-ink-muted">Resep: {r.resultNote}</p>}
       </div>
     );
