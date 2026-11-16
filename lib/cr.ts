@@ -119,6 +119,7 @@ export interface SchedulableSample {
   createdAt: Date | string;
   processTypeId: string;
   machineId: string;
+  urgentRank?: number | null; // urutan manual antar-urgent (diatur lab)
 }
 
 export type StandardTimeMap = Map<string, number>; // key: `${processTypeId}:${machineId}`
@@ -147,7 +148,8 @@ export function withCR<T extends SchedulableSample>(
 
 /**
  * Urutan antrean (4 kelompok):
- *   0. Sampel aktif yang ditandai URGENT (selalu paling atas)
+ *   0. Sampel aktif yang ditandai URGENT (selalu paling atas). Urutan manual dari lab (urgentRank) didahulukan,
+ *      urgent tanpa urutan manual menyusul berdasarkan CR.
  *   1. Sampel aktif dengan CR (CR terkecil di atas; CR negatif = terlambat paling atas)
  *   2. Sampel aktif tanpa CR (p belum diatur), diurutkan berdasarkan due date
  *   3. Sampel DISETUJUI
@@ -159,6 +161,11 @@ export function sortByPriority<T extends WithCR<SchedulableSample>>(rows: T[]): 
     const ra = rank(a);
     const rb = rank(b);
     if (ra !== rb) return ra - rb;
+    if (ra === 0) {
+      const ua = a.urgentRank ?? Infinity;
+      const ub = b.urgentRank ?? Infinity;
+      if (ua !== ub) return ua - ub;
+    }
     if (a.cr !== null && b.cr !== null && a.cr !== b.cr) return a.cr - b.cr;
     const dd = dateOnlyDayNumber(a.dueDate) - dateOnlyDayNumber(b.dueDate);
     if (dd !== 0) return dd;

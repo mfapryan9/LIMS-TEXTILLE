@@ -23,14 +23,22 @@ prisma/seed.ts            role, akun, master dari Excel, riwayat Excel, contoh a
 
 Login memakai **username**. Password awal akun hasil seed: `lims12345` (atau `SEED_PASSWORD`).
 
-| Username | Peran | Hak (alur Sprint 3) |
+| Username | Peran | Hak (alur Sprint 4) |
 |---|---|---|
-| ppic | Pengaju | **Satu-satunya** yang mengajukan sampel ke lab: No. Order, CM warna, motif, proses, due date, deskripsi order & warna, pilihan urgent (bisa scan kartu SPK). Notifikasi: pengajuan selesai + foto hasil uji |
-| operator.lab | Operator lab | Klik **Proses** (wajib isi nama pemroses) lalu **Selesai** dengan foto hasil uji (resep). Notifikasi: pengajuan masuk & urgent (terpisah) |
-| kalab | Kepala Laboratorium | Monitoring, batalkan urgent, menu **Kelola pengguna** |
+| ppic | Pengaju | **Satu-satunya** yang mengajukan sampel ke lab: nama pengaju, customer, Nomor Order, No. CM, warna, partai, proses, due date, deskripsi, pilihan urgent (bisa scan kartu SPK). **Edit / Hapus** pengajuan berupa permintaan yang baru berlaku setelah divalidasi lab. Notifikasi: pengajuan selesai + hasil validasi |
+| operator.lab | Operator lab | Klik **Proses** lalu pilih **grup pemroses**, kemudian **Selesai** dengan foto hasil uji (resep). Validasi edit/hapus dari PPIC, atur urutan urgent (naik/turun/paling atas). Notifikasi: pengajuan masuk, urgent, validasi |
+| kalab | Kepala Laboratorium | Monitoring, batalkan urgent, validasi edit/hapus, atur urutan urgent, menu **Kelola pengguna** |
 | kepala.ppic, kepala.produksi.df | Kepala | Monitoring + batalkan urgent. Notifikasi setiap pengajuan urgent |
-| kaur.lab, kasi | Kepala lab | Monitoring + batalkan urgent. Notifikasi pengajuan masuk & urgent |
+| kaur.lab, kasi | Kepala lab | Monitoring, batalkan urgent, validasi edit/hapus, atur urutan urgent |
 | admin | Monitor | Hanya pantau |
+
+Grup pemroses: ALNI, ATYKAH, SELA · ALFATH, KASIM, NOPAL · PIO, NURJANAH, JELYN · RAHMA, SYIFA, CAHYONO (`lib/processors.ts`).
+
+Semua peran memiliki menu **Laporan kinerja** (rentang tanggal pengajuan dari–sampai: jumlah pengajuan, tepat waktu,
+lama menunggu & lama proses, per grup pemroses dan kelompok mesin, order terlama yang belum selesai) dan tombol
+**Unduh Excel** di daftar pengajuan, hasil uji, dan laporan. Pencarian bisa diurutkan: terlama belum diproses,
+diproses paling lama, dan selesai paling lama.
+
 Semua akun bisa **Ganti Password** sendiri (ikon kunci di kartu profil). Ganti / reset password otomatis mengeluarkan sesi lama akun itu dari perangkat lain.
 
 Setiap sampel menampilkan berapa kali sudah diuji/matching dengan master, jumlah rework (beserta alasan terakhir),

@@ -66,3 +66,14 @@ describe("sortByPriority", () => {
     expect(sortByPriority(rows).map((r) => r.id)).toEqual(["urgent-near", "urgent-far", "late", "urgent-done"]);
   });
 });
+
+describe("urutan urgent manual dari lab", () => {
+  it("urgentRank didahulukan di antara urgent, sisanya tetap urut CR", () => {
+    const mk = (id: string, cr: number | null, urgentRank: number | null, isUrgent = true) => ({
+      id, status: "MENUNGGU" as const, isUrgent, dueDate: "2026-11-20", createdAt: "2026-11-01", processTypeId: "p", machineId: "m",
+      urgentRank, cr, daysLeft: 0, urgency: "NORMAL" as const, standardDays: 1,
+    });
+    const order = sortByPriority([mk("a", -1, null), mk("b", 3, 2), mk("c", 5, 1), mk("d", -5, null, false)]).map((r) => r.id);
+    expect(order).toEqual(["c", "b", "a", "d"]);
+  });
+});

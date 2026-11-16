@@ -67,6 +67,7 @@ export function validateSampleInput(raw: SampleInput): { error: string } | { dat
   // Sprint 3: pengajuan PPIC diidentifikasi No. Order + CM warna; No. SPK mengikuti No. Order bila kosong
   if (!data.orderNo) return { error: "Nomor Order wajib diisi" };
   if (!data.colorCode) return { error: "No. CM wajib diisi" };
+  if (data.customerName.length < 2) return { error: "Nama customer wajib diisi" };
   if (data.parties.length > 30) return { error: "Maksimal 30 partai per pengajuan" };
   if (data.parties.some((p) => p.length > 40)) return { error: "Nomor partai maksimal 40 karakter" };
   if (data.requesterName.length < 2 || data.requesterName.length > 60) return { error: "Nama pengaju wajib diisi (2–60 karakter)" };

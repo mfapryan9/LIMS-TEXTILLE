@@ -251,7 +251,7 @@ export function SampleForm(props: {
             </span>
             <div>
               <h2 className="text-lg font-bold text-ink">{mode === "create" ? "Ajukan ke Lab" : `Edit pengajuan order ${props.initial.orderNo || props.initial.spkNo}`}</h2>
-              <p className="text-xs text-ink-muted">{mode === "create" ? "Isi data pengajuan atau foto kartu SPK untuk mengisi otomatis, lalu periksa sebelum mengirim." : "Pengajuan hanya dapat diubah selama belum diproses lab. Perubahan dicatat di audit log."}</p>
+              <p className="text-xs text-ink-muted">{mode === "create" ? "Isi data pengajuan atau foto kartu SPK untuk mengisi otomatis, lalu periksa sebelum mengirim." : "Perubahan dikirim ke bagian lab dan baru berlaku setelah divalidasi. Semua perubahan dicatat di audit log."}</p>
             </div>
           </div>
           <button type="button" onClick={onClose} className="rounded-xl p-2 text-ink-soft transition hover:bg-canvas hover:text-ink" aria-label="Tutup">
@@ -318,8 +318,9 @@ export function SampleForm(props: {
             )}
             {error && <p role="alert" className="rounded-xl bg-rose-50 px-3.5 py-2.5 text-sm text-rose-700 ring-1 ring-rose-200">{error}</p>}
 
-            <FormSection title="Data order" desc="Nama pengaju, Nomor Order, dan No. CM wajib diisi. Partai opsional dan bisa lebih dari satu.">
+            <FormSection title="Data order" desc="Nama pengaju, customer, Nomor Order, dan No. CM wajib diisi. Partai opsional dan bisa lebih dari satu.">
               <Field fromPhoto={found.has("requesterName" as SpkField)} label="Nama pengaju">{text("requesterName", "Nama yang mengajukan")}</Field>
+              <Field fromPhoto={found.has("customerName" as SpkField)} label="Nama customer">{text("customerName", "mis. PT Sinar Tekstil")}</Field>
               <Field fromPhoto={found.has("orderNo" as SpkField)} label="Nomor Order">{text("orderNo", "mis. 26-3012")}</Field>
               <Field fromPhoto={found.has("colorCode" as SpkField)} label="No. CM">{text("colorCode", "mis. CM-102")}</Field>
               <Field fromPhoto={found.has("colorName" as SpkField)} label="Warna">{text("colorName", "mis. Merah marun")}</Field>
@@ -446,7 +447,7 @@ export function SampleForm(props: {
           )}
           <button type="button" disabled={pending || ocr.state === "running"} onClick={() => submit(false)} className={primaryBtn}>
             {pending ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden /> : <Check className="h-4 w-4" aria-hidden />}
-            {pending ? "Mengirim…" : mode === "create" ? "Kirim pengajuan" : "Simpan perubahan"}
+            {pending ? "Mengirim…" : mode === "create" ? "Kirim pengajuan" : "Kirim permintaan edit ke lab"}
           </button>
         </div>
       </div>

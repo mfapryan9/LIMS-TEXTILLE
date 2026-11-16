@@ -45,7 +45,12 @@ export const VIEW_DEFAULT_STATUSES: Record<ViewMode, string[] | "ALL"> = {
   MONITOR: "ALL",
 };
 
-export type Permission = "submitRequest" | "processRequest" | "interveneUrgent" | "markUrgent" | "manageUsers" | "manageMaster";
+export type Permission =
+  | "submitRequest" | "processRequest" | "interveneUrgent" | "markUrgent" | "manageUsers" | "manageMaster"
+  | "validateChange" | "reorderUrgent";
+
+/** Bagian lab: memvalidasi permintaan edit/hapus PPIC dan mengatur urutan urgent. */
+export const isLabRole = (roleCode: string) => LAB_ROLES.includes(roleCode);
 
 /** SERVER-SIDE guard: panggil di setiap server action / route handler. UI hanya menyembunyikan tombol. */
 export function assertCan(user: SessionUser, action: Permission) {
@@ -55,19 +60,23 @@ export function assertCan(user: SessionUser, action: Permission) {
     (action === "interveneUrgent" && user.canInterveneUrgent) ||
     (action === "markUrgent" && user.canMarkUrgent) ||
     (action === "manageUsers" && user.canManageUsers) ||
-    (action === "manageMaster" && user.canManageMaster);
+    (action === "manageMaster" && user.canManageMaster) ||
+    ((action === "validateChange" || action === "reorderUrgent") && isLabRole(user.roleCode));
   if (!ok) throw new Error("FORBIDDEN");
 }
 
 // ───────────── Notifikasi (diturunkan dari data, berbeda per peran) ─────────────
 
-/** INCOMING = pengajuan masuk (lab), URGENT = pengajuan urgent (lab & kepala), DONE = pengajuan selesai (PPIC). */
-export type NotifType = "INCOMING" | "URGENT" | "DONE";
+/**
+ * INCOMING = pengajuan masuk (lab), URGENT = pengajuan urgent (lab & kepala), DONE = pengajuan selesai (PPIC),
+ * CHANGE = permintaan edit/hapus dari PPIC yang menunggu validasi (lab), CHANGE_RESULT = hasil validasi (PPIC).
+ */
+export type NotifType = "INCOMING" | "URGENT" | "DONE" | "CHANGE" | "CHANGE_RESULT";
 
 export interface Notif {
   key: string;
   type: NotifType;
-  sampleId: string;
+  sampleId: string | null; // null bila pengajuan sudah dihapus
   title: string;
   detail: string;
   unread: boolean;
@@ -88,10 +97,25 @@ export interface NotifSource {
   requesterName?: string | null;
 }
 
+export interface ChangeSource {
+  id: string;
+  sampleId: string | null;
+  type: "EDIT" | "DELETE";
+  status: "PENDING" | "APPROVED" | "REJECTED";
+  label: string;
+  reason: string | null;
+  requesterName: string | null;
+  createdAt: string; // ISO
+  decidedAt: string | null; // ISO
+  decidedByName: string | null;
+  decisionNote: string | null;
+}
+
 const DONE_WINDOW_MS = 14 * 24 * 3600 * 1000;
 const ACTIVE = ["MENUNGGU", "DALAM_PROSES"];
+export const CHANGE_LABEL = { EDIT: "edit", DELETE: "hapus" } as const;
 
-export function deriveNotifications(rows: NotifSource[], roleCode: string, seenAt: string | null, now: Date = new Date()): Notif[] {
+export function deriveNotifications(rows: NotifSource[], roleCode: string, seenAt: string | null, now: Date = new Date(), changes: ChangeSource[] = []): Notif[] {
   const seen = seenAt ? new Date(seenAt).getTime() : 0;
   const isLab = LAB_ROLES.includes(roleCode);
   const watchUrgent = isLab || URGENT_WATCH_ROLES.includes(roleCode);
@@ -125,6 +149,28 @@ export function deriveNotifications(rows: NotifSource[], roleCode: string, seenA
       }
     }
   }
+  for (const c of changes) {
+    if (isLab && c.status === "PENDING") {
+      const at = new Date(c.createdAt).getTime();
+      out.push({
+        key: `change-${c.id}`, type: "CHANGE", sampleId: c.sampleId, at, unread: at > seen,
+        title: `Permintaan ${CHANGE_LABEL[c.type]} ${c.label}`,
+        detail: `Dari PPIC${c.requesterName ? ` (${c.requesterName})` : ""} · menunggu validasi lab${c.reason ? ` · ${c.reason}` : ""}`,
+      });
+    }
+    if (isPpic && c.status !== "PENDING" && c.decidedAt) {
+      const at = new Date(c.decidedAt).getTime();
+      if (now.getTime() - at < DONE_WINDOW_MS) {
+        const ok = c.status === "APPROVED";
+        out.push({
+          key: `change-${c.id}`, type: "CHANGE_RESULT", sampleId: c.type === "DELETE" && ok ? null : c.sampleId, at, unread: at > seen,
+          title: `Permintaan ${CHANGE_LABEL[c.type]} ${c.label} ${ok ? "disetujui" : "ditolak"} lab`,
+          detail: `${c.decidedByName ? `Oleh ${c.decidedByName}` : "Divalidasi lab"}${c.decisionNote ? ` · ${c.decisionNote}` : ""}`,
+        });
+      }
+    }
+  }
+
   // Terbaru di atas
   return out.sort((a, b) => b.at - a.at).map(({ at: _at, ...n }) => n);
 }

@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { Bell, CheckCheck, CheckCircle2, FlaskConical, Inbox, Layers, RotateCcw, Search, type LucideIcon } from "lucide-react";
 import type { Notif, NotifType } from "@/lib/roles";
 import { machineTone, STATUS_LABEL, type SampleRow } from "./badges";
+import { doneHours, waitHours } from "./SampleTable";
 import type { SampleStatusKey } from "@/lib/cr";
 
 /* ───────── Notifikasi di header (FR-10) ───────── */
@@ -12,7 +13,9 @@ import type { SampleStatusKey } from "@/lib/cr";
 const NOTIF_GROUPS: { type: NotifType; label: string; dot: string }[] = [
   { type: "URGENT", label: "Pengajuan urgent", dot: "bg-fuchsia-500" },
   { type: "INCOMING", label: "Pengajuan masuk", dot: "bg-brand-500" },
+  { type: "CHANGE", label: "Validasi edit / hapus dari PPIC", dot: "bg-amber-500" },
   { type: "DONE", label: "Pengajuan selesai", dot: "bg-emerald-500" },
+  { type: "CHANGE_RESULT", label: "Hasil validasi lab", dot: "bg-sky-500" },
 ];
 
 export function NotificationBell({
@@ -21,7 +24,7 @@ export function NotificationBell({
   onMarkSeen,
 }: {
   notifs: Notif[];
-  onOpenSample: (id: string) => void;
+  onOpenSample: (id: string | null) => void; // null: pengajuan sudah dihapus
   onMarkSeen: () => void; // server action: set users.notificationsSeenAt = now()
 }) {
   const [open, setOpen] = useState(false);
@@ -156,27 +159,45 @@ export function StatsStrip({
 
 /* ───────── Filter & pencarian ───────── */
 
+/** Urutan tampilan. PRIORITY = urutan antrean (urgent + CR); lainnya untuk mencari order terlama. */
+export type SortMode = "PRIORITY" | "OLDEST_WAITING" | "LONGEST_PROCESS" | "SLOWEST_DONE";
+export const SORT_LABEL: Record<SortMode, string> = {
+  PRIORITY: "Urutan prioritas (urgent & CR)",
+  OLDEST_WAITING: "Terlama belum diproses",
+  LONGEST_PROCESS: "Diproses paling lama (belum selesai)",
+  SLOWEST_DONE: "Selesai paling lama",
+};
+
 export interface Filters {
   q: string;
+  sort: SortMode;
   status: SampleStatusKey | "ALL";
   urgency: "ALL" | "LATE" | "WARNING" | "URGENT";
   orderType: "ALL" | "PRODUKSI" | "MARKETING";
   machineId: string; // "ALL" atau id
 }
 
-export const DEFAULT_FILTERS: Filters = { q: "", status: "ALL", urgency: "ALL", orderType: "ALL", machineId: "ALL" };
+export const DEFAULT_FILTERS: Filters = { q: "", sort: "PRIORITY", status: "ALL", urgency: "ALL", orderType: "ALL", machineId: "ALL" };
 
 export function applyFilters(rows: SampleRow[], f: Filters): SampleRow[] {
   const q = f.q.trim().toLowerCase();
-  return rows.filter((r) => {
+  const out = rows.filter((r) => {
+    // Mode urutan "terlama" sekaligus menyaring status yang relevan
+    if (f.sort === "OLDEST_WAITING" && r.status !== "MENUNGGU") return false;
+    if (f.sort === "LONGEST_PROCESS" && r.status !== "DALAM_PROSES") return false;
+    if (f.sort === "SLOWEST_DONE" && r.status !== "DISETUJUI") return false;
     if (f.status !== "ALL" && r.status !== f.status) return false;
     if (f.orderType !== "ALL" && r.orderType !== f.orderType) return false;
     if (f.machineId !== "ALL" && r.machineId !== f.machineId) return false;
     if (f.urgency === "URGENT" && !r.isUrgent) return false;
     if ((f.urgency === "LATE" || f.urgency === "WARNING") && r.urgency !== f.urgency) return false;
-    if (q && ![r.spkNo, r.orderNo, r.processName, r.machineName, r.motif, r.colorCode, r.colorName, r.colorDirection, r.problemDescription, r.processorName, r.requesterName, r.parties.join(" ")].some((v) => v?.toLowerCase().includes(q))) return false;
-    return true; // urutan CR dipertahankan dari server (sortByPriority)
+    if (q && ![r.spkNo, r.orderNo, r.customerName, r.processName, r.machineName, r.motif, r.colorCode, r.colorName, r.colorDirection, r.problemDescription, r.processorName, r.requesterName, r.parties.join(" ")].some((v) => v?.toLowerCase().includes(q))) return false;
+    return true;
   });
+  // PRIORITY: urutan dari server (sortByPriority) dipertahankan
+  if (f.sort === "OLDEST_WAITING" || f.sort === "LONGEST_PROCESS") return out.sort((a, b) => (waitHours(b) ?? 0) - (waitHours(a) ?? 0));
+  if (f.sort === "SLOWEST_DONE") return out.sort((a, b) => doneHours(b) - doneHours(a));
+  return out;
 }
 
 export const fieldCls =
@@ -192,11 +213,14 @@ export function FilterBar({ value, onChange }: { value: Filters; onChange: (f: F
           type="search"
           value={value.q}
           onChange={(e) => set("q", e.target.value)}
-          placeholder="Cari nomor order, No. CM, warna, partai, pengaju, pemroses"
+          placeholder="Cari nomor order, customer, No. CM, warna, partai, pengaju, pemroses"
           aria-label="Cari pengajuan"
           className={`${fieldCls} w-full pl-10`}
         />
       </span>
+      <select aria-label="Urutkan" value={value.sort} onChange={(e) => onChange({ ...value, sort: e.target.value as SortMode, status: "ALL" })} className={fieldCls}>
+        {(Object.keys(SORT_LABEL) as SortMode[]).map((k) => <option key={k} value={k}>{SORT_LABEL[k]}</option>)}
+      </select>
       <select aria-label="Urgensi" value={value.urgency} onChange={(e) => set("urgency", e.target.value as Filters["urgency"])} className={fieldCls}>
         <option value="ALL">Semua urgensi</option>
         <option value="LATE">Terlambat</option>

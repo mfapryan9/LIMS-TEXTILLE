@@ -1,6 +1,16 @@
 import { AlertTriangle, CheckCircle2, Clock3, Zap } from "lucide-react";
 import type { SampleStatusKey, Urgency } from "@/lib/cr";
 
+/** Permintaan edit / hapus dari PPIC yang menunggu validasi lab. */
+export type PendingChange = {
+  id: string;
+  type: "EDIT" | "DELETE";
+  reason: string | null;
+  requesterName: string | null;
+  createdAt: string; // ISO
+  diff: { field: string; before: string; after: string }[];
+};
+
 export type SampleRow = {
   id: string;
   orderNo: string | null;
@@ -27,6 +37,8 @@ export type SampleRow = {
   parties: string[]; // Nomor partai
   requesterName: string | null; // Nama yang mengajukan
   urgentAt: string | null; // ISO
+  urgentRank: number | null; // urutan manual antar-urgent dari lab
+  pendingChange: PendingChange | null;
   processorName: string | null; // nama operator yang memproses (Sprint 3)
   processStartedAt: string | null; // ISO
   completedAt: string | null; // ISO, selesai + foto hasil uji

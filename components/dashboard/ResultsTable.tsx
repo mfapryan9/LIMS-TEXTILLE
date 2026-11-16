@@ -5,6 +5,7 @@ import { BadgeCheck, CheckCircle2, FlaskConical, Inbox, Search, Target, Timer, t
 import { fmtDays, MachineChip, machineTone, type SampleRow } from "./badges";
 import { fieldCls, type MachineGroup } from "./header-parts";
 import { fmtDate, fmtStamp, PartyChips, PhotoLink } from "./SampleTable";
+import { ExportButton, fileStamp, rowsSheet } from "./ExportButton";
 
 /** Hasil uji yang sudah di-ACC: jumlah uji, ACC di uji ke berapa, durasi dari masuk lab, CR saat order (sama dengan Excel). */
 export function ResultsTable({ rows, groups }: { rows: SampleRow[]; groups: MachineGroup[] }) {
@@ -23,7 +24,7 @@ export function ResultsTable({ rows, groups }: { rows: SampleRow[]; groups: Mach
     const s = q.trim().toLowerCase();
     if (!s) return done;
     return done.filter((r) =>
-      [r.spkNo, r.orderNo, r.processName, r.machineName, r.colorCode, r.colorName, r.motif, r.approverName, r.processorName, r.requesterName, r.parties.join(" ")].some((v) => v?.toLowerCase().includes(s)),
+      [r.spkNo, r.orderNo, r.customerName, r.processName, r.machineName, r.colorCode, r.colorName, r.motif, r.approverName, r.processorName, r.requesterName, r.parties.join(" ")].some((v) => v?.toLowerCase().includes(s)),
     );
   }, [done, q]);
 
@@ -47,9 +48,12 @@ export function ResultsTable({ rows, groups }: { rows: SampleRow[]; groups: Mach
           Riwayat ACC {group !== "ALL" && <span className="text-ink-muted">· {groups.find((g) => g.id === group)?.name}</span>}
           <span className="ml-2 rounded-full bg-white px-2 py-0.5 text-xs font-semibold text-ink-muted ring-1 ring-line">{visible.length}</span>
         </h2>
+        <span className="flex w-full flex-wrap items-center gap-2 sm:w-auto">
+        <ExportButton build={() => ({ filename: `DyeLIMS-hasil-uji-${fileStamp()}`, sheets: [rowsSheet("Hasil uji selesai", visible, "Hasil uji selesai · DyeLIMS")] })} />
         <span className="relative w-full sm:w-80">
           <Search className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-soft" aria-hidden />
-          <input type="search" value={q} onChange={(e) => setQ(e.target.value)} placeholder="Cari SPK, order, proses, approver" aria-label="Cari hasil uji" className={`${fieldCls} w-full pl-10`} />
+          <input type="search" value={q} onChange={(e) => setQ(e.target.value)} placeholder="Cari order, customer, proses, pemroses" aria-label="Cari hasil uji" className={`${fieldCls} w-full pl-10`} />
+        </span>
         </span>
       </div>
 
@@ -78,6 +82,7 @@ export function ResultsTable({ rows, groups }: { rows: SampleRow[]; groups: Mach
                 <tr key={r.id} className="align-top transition-colors hover:bg-canvas/60">
                   <td className="px-4 py-4">
                     <p className="font-semibold text-ink">Order {r.orderNo ?? r.spkNo}</p>
+                    {r.customerName && <p className="text-xs font-medium text-ink-muted">{r.customerName}</p>}
                     {r.spkNo !== r.orderNo && <p className="mt-0.5 whitespace-nowrap text-xs text-ink-muted">SPK {r.spkNo}{r.orderDate ? ` · ${fmtDate(r.orderDate)}` : ""}</p>}
                     {r.colorCode && <p className="text-xs text-ink-muted">No. CM {r.colorCode}{r.colorName ? ` · ${r.colorName}` : ""}</p>}
                     {r.parties.length > 0 && <PartyChips parties={r.parties} />}

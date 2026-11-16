@@ -1,11 +1,11 @@
 import { prisma } from "@/lib/prisma";
 import { getSessionUser } from "@/lib/auth";
 import { buildStandardTimeMap, calculateCR, dateOnlyDayNumber, jakartaDayNumber, sortByPriority, withCR } from "@/lib/cr";
-import { deriveNotifications } from "@/lib/roles";
+import { deriveNotifications, type ChangeSource } from "@/lib/roles";
 import { DashboardClient } from "@/components/dashboard/DashboardClient";
-import type { SampleRow } from "@/components/dashboard/badges";
+import type { PendingChange, SampleRow } from "@/components/dashboard/badges";
 import { changeOwnPassword, createUser, resetUserPassword, updateUser } from "@/app/user-actions";
-import { cancelUrgent, createSample, finishProcess, markNotificationsSeen, startProcess, updateSample } from "@/app/actions";
+import { cancelChange, cancelUrgent, createSample, decideChange, finishProcess, markNotificationsSeen, moveUrgent, requestDelete, requestEdit, startProcess } from "@/app/actions";
 import { logout } from "@/app/login/actions";
 
 export const dynamic = "force-dynamic"; // CR bergantung pada tanggal hari ini → jangan di-cache statis
@@ -17,7 +17,8 @@ const jakartaIso = (d: Date) => new Date(jakartaDayNumber(d) * 86_400_000).toISO
 export default async function DashboardPage() {
   const user = await getSessionUser();
 
-  const [samples, times, machines, processTypes] = await Promise.all([
+  const changeSince = new Date(Date.now() - 14 * 24 * 3600 * 1000);
+  const [samples, times, machines, processTypes, changes] = await Promise.all([
     prisma.sample.findMany({
       include: {
         processType: true,
@@ -29,7 +30,25 @@ export default async function DashboardPage() {
     prisma.masterProcessTime.findMany(),
     prisma.machine.findMany({ where: { isActive: true }, orderBy: { name: "asc" } }),
     prisma.processType.findMany({ where: { isActive: true }, orderBy: { name: "asc" } }),
+    // Permintaan edit/hapus PPIC: yang menunggu validasi lab + hasil validasi 14 hari terakhir (notifikasi PPIC)
+    prisma.changeRequest.findMany({
+      where: { OR: [{ status: "PENDING" }, { decidedAt: { gte: changeSince } }] },
+      include: { decidedBy: { select: { name: true } } },
+      orderBy: { createdAt: "asc" },
+    }),
   ]);
+  const pendingBySample = new Map<string, PendingChange>(
+    changes
+      .filter((c) => c.status === "PENDING" && c.sampleId)
+      .map((c) => [c.sampleId!, {
+        id: c.id, type: c.type, reason: c.reason, requesterName: c.requesterName, createdAt: c.createdAt.toISOString(),
+        diff: ((c.payload as { diff?: PendingChange["diff"] } | null)?.diff) ?? [],
+      }]),
+  );
+  const changeSources: ChangeSource[] = changes.map((c) => ({
+    id: c.id, sampleId: c.sampleId, type: c.type, status: c.status, label: c.label, reason: c.reason, requesterName: c.requesterName,
+    createdAt: c.createdAt.toISOString(), decidedAt: c.decidedAt?.toISOString() ?? null, decidedByName: c.decidedBy?.name ?? null, decisionNote: c.decisionNote,
+  }));
 
   // Kelola pengguna: hanya dimuat untuk Kepala Laboratorium (canManageUsers)
   const [users, roles] = user.canManageUsers
@@ -68,6 +87,7 @@ export default async function DashboardPage() {
       receivedDate: s.receivedDate, dueDate: s.dueDate,
       status: s.status, isUrgent: s.isUrgent,
       createdAt: s.createdAt.toISOString(), urgentAt: s.urgentAt?.toISOString() ?? null,
+      urgentRank: s.urgentRank, pendingChange: pendingBySample.get(s.id) ?? null,
       colorName: s.colorName, parties: s.parties, requesterName: s.requesterName,
       processorName: s.processorName, processStartedAt: s.processStartedAt?.toISOString() ?? null,
       completedAt: s.completedAt?.toISOString() ?? null, resultNote: s.resultNote, hasPhoto: !!s.resultPhoto,
@@ -89,8 +109,8 @@ export default async function DashboardPage() {
     };
   });
 
-  // Notifikasi berbeda per peran: lab (pengajuan masuk & urgent), PPIC (pengajuan selesai), kepala (urgent)
-  const notifs = deriveNotifications(rows, user.roleCode, user.notificationsSeenAt);
+  // Notifikasi berbeda per peran: lab (pengajuan masuk, urgent, validasi edit/hapus), PPIC (selesai, hasil validasi), kepala (urgent)
+  const notifs = deriveNotifications(rows, user.roleCode, user.notificationsSeenAt, new Date(), changeSources);
 
   return (
     <DashboardClient
@@ -108,12 +128,12 @@ export default async function DashboardPage() {
           processes: processTypes.filter((p) => own.some((t) => t.processTypeId === p.id)).map((p) => p.name),
         };
       })}
-      actions={{ startProcess, finishProcess, cancelUrgent, markNotificationsSeen }}
+      actions={{ startProcess, finishProcess, cancelUrgent, moveUrgent, requestDelete, cancelChange, decideChange, markNotificationsSeen }}
       editor={{
         processTypes: processTypes.map((p) => ({ id: p.id, name: p.name })),
         processMachine: Object.fromEntries(times.map((t) => [t.processTypeId, t.machineId])),
         create: createSample,
-        update: updateSample,
+        update: requestEdit,
       }}
       userAdmin={
         user.canManageUsers

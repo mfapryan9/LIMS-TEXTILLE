@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { BadgeCheck, CalendarDays, FilePlus2, KeyRound, ListChecks, LogOut, RefreshCw, Users, Zap } from "lucide-react";
+import { BadgeCheck, BarChart3, CalendarDays, FilePlus2, KeyRound, ListChecks, LogOut, RefreshCw, Users, Zap } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import type { Notif, SessionUser, ViewMode } from "@/lib/roles";
@@ -12,15 +12,17 @@ import { initials, type SampleRow } from "./badges";
 import { applyFilters, DEFAULT_FILTERS, FilterBar, MachineGroupTabs, NotificationBell, StatsStrip, type Filters, type MachineGroup } from "./header-parts";
 import { PasswordDialog } from "./PasswordDialog";
 import { ResultsTable } from "./ResultsTable";
+import { ReportPanel } from "./ReportPanel";
+import { ExportButton, fileStamp, rowsSheet } from "./ExportButton";
 import { UsersPanel, type UserAdmin } from "./UsersPanel";
 import type { UserFormResult } from "@/lib/user-input";
 import { SampleForm } from "./SampleForm";
 import { fmtDate, SampleTable, type SampleActions } from "./SampleTable";
 
 const VIEW_COPY: Record<ViewMode, { title: string; hint: string }> = {
-  OPERATOR: { title: "Pengajuan masuk lab", hint: "Pengajuan dari PPIC. Klik Proses dan isi nama pemroses, lalu Selesai dengan melampirkan foto hasil uji. Urgent paling atas, lalu Critical Ratio terkecil." },
+  OPERATOR: { title: "Pengajuan masuk lab", hint: "Pengajuan dari PPIC. Klik Proses dan pilih grup pemroses, lalu Selesai dengan melampirkan foto hasil uji. Urgent paling atas (urutannya bisa digeser), lalu Critical Ratio terkecil." },
   APPROVER: { title: "Monitoring pengajuan lab", hint: "Pantau seluruh pengajuan lab." },
-  PLANNER: { title: "Pengajuan ke lab", hint: "Ajukan sampel ke lab (pilih urgent bila mendesak), pantau prosesnya, dan lihat foto hasil uji saat pengajuan selesai." },
+  PLANNER: { title: "Pengajuan ke lab", hint: "Ajukan sampel ke lab (pilih urgent bila mendesak), pantau prosesnya, dan lihat foto hasil uji saat pengajuan selesai. Edit atau hapus pengajuan berlaku setelah divalidasi bagian lab." },
   MONITOR: { title: "Monitoring pengajuan lab", hint: "Pantau seluruh pengajuan lab beserta pemroses dan hasil ujinya. Kepala dapat membatalkan urgent bila diperlukan." },
 };
 
@@ -58,9 +60,9 @@ export function DashboardClient(props: {
   const canEdit = !!editor && user.canEditSample;
   const showResults = user.viewMode !== "OPERATOR";
   const showUsers = !!userAdmin && user.canManageUsers;
-  const [tab, setTab] = useState<"queue" | "results" | "users">("queue");
+  const [tab, setTab] = useState<"queue" | "results" | "report" | "users">("queue");
   const [pwOpen, setPwOpen] = useState(false);
-  const pageTitle = tab === "results" ? "Hasil uji selesai" : tab === "users" ? "Kelola pengguna" : copy.title;
+  const pageTitle = tab === "results" ? "Hasil uji selesai" : tab === "report" ? "Laporan kinerja" : tab === "users" ? "Kelola pengguna" : copy.title;
   const router = useRouter();
 
   // CR dihitung terhadap "hari ini": muat ulang data berkala & saat tab kembali aktif,
@@ -89,9 +91,9 @@ export function DashboardClient(props: {
 
   // Operator: sembunyikan sampel DISETUJUI dari antrean kecuali dipilih eksplisit
   const scoped = useMemo(() => {
-    if (user.viewMode === "OPERATOR" && filters.status === "ALL") return rows.filter((r) => r.status !== "DISETUJUI");
+    if (user.viewMode === "OPERATOR" && filters.status === "ALL" && filters.sort !== "SLOWEST_DONE") return rows.filter((r) => r.status !== "DISETUJUI");
     return rows;
-  }, [rows, user.viewMode, filters.status]);
+  }, [rows, user.viewMode, filters.status, filters.sort]);
 
   const visible = useMemo(() => applyFilters(scoped, filters), [scoped, filters]);
 
@@ -117,9 +119,10 @@ export function DashboardClient(props: {
   const activeCount = rows.length - doneCount;
   const urgentCount = rows.filter((r) => r.isUrgent && r.status !== "DISETUJUI").length;
   const nav = [
-    { key: "queue" as const, label: "Pengajuan lab", icon: ListChecks, count: activeCount },
-    ...(showResults ? [{ key: "results" as const, label: "Hasil uji selesai", icon: BadgeCheck, count: doneCount }] : []),
-    ...(showUsers ? [{ key: "users" as const, label: "Kelola pengguna", icon: Users, count: userAdmin!.users.filter((u) => u.isActive).length }] : []),
+    { key: "queue" as const, label: "Pengajuan lab", icon: ListChecks, count: activeCount as number | null },
+    ...(showResults ? [{ key: "results" as const, label: "Hasil uji selesai", icon: BadgeCheck, count: doneCount as number | null }] : []),
+    { key: "report" as const, label: "Laporan kinerja", icon: BarChart3, count: null as number | null },
+    ...(showUsers ? [{ key: "users" as const, label: "Kelola pengguna", icon: Users, count: userAdmin!.users.filter((u) => u.isActive).length as number | null }] : []),
   ];
   const roleLabel = user.roleCode.replaceAll("_", " ").toLowerCase();
 
@@ -147,7 +150,7 @@ export function DashboardClient(props: {
                 className={`flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold transition ${sel ? "bg-canvas text-brand-700 shadow-[inset_3px_0_0_0_theme(colors.accent.DEFAULT)]" : "text-brand-50/85 hover:bg-white/10 hover:text-white"}`}>
                 <Icon className={`h-[18px] w-[18px] ${sel ? "text-brand-400" : ""}`} aria-hidden />
                 <span className="flex-1 text-left">{label}</span>
-                <span className={`rounded-full px-2 py-0.5 text-xs tabular-nums ${sel ? "bg-accent-100 text-accent-700" : "bg-white/10 text-brand-50"}`}>{count}</span>
+                {count !== null && <span className={`rounded-full px-2 py-0.5 text-xs tabular-nums ${sel ? "bg-accent-100 text-accent-700" : "bg-white/10 text-brand-50"}`}>{count}</span>}
               </button>
             );
           })}
@@ -205,6 +208,7 @@ export function DashboardClient(props: {
               notifs={notifs}
               onMarkSeen={() => actions.markNotificationsSeen()}
               onOpenSample={(id) => {
+                if (!id) return; // pengajuan sudah dihapus
                 setFilters(DEFAULT_FILTERS); // pastikan baris tidak tersaring
                 setTab("queue");
                 setHighlight(id);
@@ -245,6 +249,8 @@ export function DashboardClient(props: {
           <p className="mt-1 max-w-3xl text-sm text-ink-muted">
             {tab === "results"
               ? "Pengajuan yang sudah selesai: siapa yang memproses, durasi sejak masuk lab, dan foto hasil uji (resep)."
+              : tab === "report"
+                ? "Rekap kinerja lab untuk rentang tanggal pengajuan yang dipilih: jumlah pengajuan, ketepatan waktu, lama menunggu & lama proses, per grup pemroses dan kelompok mesin."
               : tab === "users"
                 ? "Tambah akun baru, ubah nama atau peran, reset password yang lupa, dan nonaktifkan akun yang tidak dipakai lagi."
                 : copy.hint}
@@ -262,7 +268,7 @@ export function DashboardClient(props: {
             {nav.map(({ key, label, count }) => (
               <button key={key} type="button" role="tab" aria-selected={tab === key} onClick={() => setTab(key)}
                 className={`rounded-lg px-3.5 py-2 text-sm font-semibold transition ${tab === key ? "bg-brand-600 text-white" : "text-ink-muted hover:text-ink"}`}>
-                {label} <span className="opacity-60">({count})</span>
+                {label} {count !== null && <span className="opacity-60">({count})</span>}
               </button>
             ))}
           </div>
@@ -272,6 +278,8 @@ export function DashboardClient(props: {
           <UsersPanel admin={userAdmin} meId={user.id} />
         ) : tab === "results" ? (
           <ResultsTable rows={rows} groups={machines} />
+        ) : tab === "report" ? (
+          <ReportPanel rows={rows} groups={machines} />
         ) : (
           <>
             <MachineGroupTabs groups={machines} rows={rows} value={filters.machineId} onChange={(machineId) => setFilters((f) => ({ ...f, machineId }))} />
@@ -280,13 +288,17 @@ export function DashboardClient(props: {
 
             <div className="space-y-3">
               <FilterBar value={filters} onChange={setFilters} />
-              <p className="text-xs font-medium text-ink-soft" aria-live="polite">
-                Menampilkan {visible.length} dari {groupRows.length} pengajuan
-                {filters.machineId !== "ALL" && ` di ${machines.find((m) => m.id === filters.machineId)?.name ?? "kelompok ini"}`}
-              </p>
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <p className="text-xs font-medium text-ink-soft" aria-live="polite">
+                  Menampilkan {visible.length} dari {groupRows.length} pengajuan
+                  {filters.machineId !== "ALL" && ` di ${machines.find((m) => m.id === filters.machineId)?.name ?? "kelompok ini"}`}
+                </p>
+                <ExportButton build={() => ({ filename: `DyeLIMS-pengajuan-${fileStamp()}`, sheets: [rowsSheet("Pengajuan", visible, `Daftar pengajuan lab DyeLIMS · diunduh ${fmtDate(todayJakarta())}`)] })} />
+              </div>
             </div>
 
-            <SampleTable rows={visible} user={user} actions={actions} highlightId={highlight} onEdit={canEdit ? (row) => setForm({ mode: "edit", row }) : undefined} />
+            <SampleTable rows={visible} user={user} actions={actions} highlightId={highlight} canReorder={filters.sort === "PRIORITY"}
+              onEdit={canEdit ? (row) => setForm({ mode: "edit", row }) : undefined} />
           </>
         )}
       </main>

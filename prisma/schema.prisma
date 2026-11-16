@@ -31,6 +31,18 @@ enum TrialStatus {
   SELESAI
 }
 
+// Sprint 4: PPIC meminta edit / hapus pengajuan → divalidasi bagian lab
+enum ChangeType {
+  EDIT
+  DELETE
+}
+
+enum ChangeStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
 enum ApprovalDecision {
   PENDING
   APPROVED
@@ -81,6 +93,8 @@ model User {
   samplesUrgent   Sample[]    @relation("SampleUrgentBy")
   trialsRun       TestTrial[] @relation("TrialOperator")
   trialsDecided   TestTrial[] @relation("TrialApprover")
+  changesRequested ChangeRequest[] @relation("ChangeRequestedBy")
+  changesDecided   ChangeRequest[] @relation("ChangeDecidedBy")
   auditLogs       AuditLog[]
 
   @@map("users")
@@ -163,6 +177,7 @@ model Sample {
   urgentReason   String?
   urgentById     String?
   urgentAt       DateTime?
+  urgentRank     Int?      // urutan manual antar-urgent oleh lab (1 = paling atas); null = ikut CR
 
   createdById String
   createdAt   DateTime @default(now())
@@ -174,6 +189,7 @@ model Sample {
   urgentBy    User?       @relation("SampleUrgentBy", fields: [urgentById], references: [id])
   trials      TestTrial[]
   auditLogs   AuditLog[]
+  changeRequests ChangeRequest[]
 
   // Satu SPK bisa memuat beberapa warna → unik per (SPK + kode warna)
   @@unique([spkNo, colorCode])
@@ -194,6 +210,31 @@ model ResultPhoto {
   sample Sample @relation(fields: [sampleId], references: [id], onDelete: Cascade)
 
   @@map("result_photos")
+}
+
+// Permintaan edit / hapus pengajuan dari PPIC. Baru berlaku setelah divalidasi (disetujui) bagian lab.
+model ChangeRequest {
+  id            String       @id @default(cuid())
+  sampleId      String?      // null bila pengajuan sudah dihapus (permintaan hapus disetujui)
+  type          ChangeType
+  status        ChangeStatus @default(PENDING)
+  label         String       // "Order 26-4001 · CM-415", tetap terbaca setelah pengajuan dihapus
+  payload       Json?        // EDIT: { input, diff }
+  reason        String?      // alasan dari PPIC
+  requestedById String
+  requesterName String?
+  decidedById   String?
+  decidedAt     DateTime?
+  decisionNote  String?
+  createdAt     DateTime     @default(now())
+
+  sample      Sample? @relation(fields: [sampleId], references: [id], onDelete: SetNull)
+  requestedBy User    @relation("ChangeRequestedBy", fields: [requestedById], references: [id])
+  decidedBy   User?   @relation("ChangeDecidedBy", fields: [decidedById], references: [id])
+
+  @@index([status])
+  @@index([sampleId])
+  @@map("change_requests")
 }
 
 // Percobaan ke-n untuk satu sampel

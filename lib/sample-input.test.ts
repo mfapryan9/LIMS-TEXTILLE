@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { validateSampleInput, type SampleInput } from "./sample-input";
 
 const base: SampleInput = {
-  orderType: "PRODUKSI", orderNo: "26-4001", orderDate: "", spkNo: "2609001", customerName: "", motif: "", colorDirection: "", colorCode: "CM-415", colorName: "Merah marun", parties: ["P-01"], requesterName: "Rina",
+  orderType: "PRODUKSI", orderNo: "26-4001", orderDate: "", spkNo: "2609001", customerName: "PT Sinar Tekstil", motif: "", colorDirection: "", colorCode: "CM-415", colorName: "Merah marun", parties: ["P-01"], requesterName: "Rina",
   processTypeId: "p1", machineId: "m1", newProcess: "", newMachine: "", newMachineP: "",
   fabricProblem: "", problemDescription: "", receivedDate: "2026-11-03", dueDate: "2026-11-10", isUrgent: false,
 };
@@ -17,6 +17,10 @@ describe("validateSampleInput: pengajuan PPIC (Sprint 3)", () => {
   it("partai opsional dan bisa lebih dari satu: dirapikan, kapital, tanpa ganda", () => {
     expect(ok(validateSampleInput({ ...base, parties: [" p-01 ", "P-02", "", "p-01"] })).parties).toEqual(["P-01", "P-02"]);
     expect(ok(validateSampleInput({ ...base, parties: [" "] })).parties).toEqual([]);
+  });
+
+  it("nama customer wajib diisi", () => {
+    expect(validateSampleInput({ ...base, customerName: " " })).toEqual({ error: "Nama customer wajib diisi" });
   });
 
   it("nama pengaju wajib diisi", () => {
