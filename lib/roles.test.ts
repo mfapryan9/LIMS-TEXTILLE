@@ -3,7 +3,7 @@ import { assertCan, deriveNotifications, type ChangeSource, type NotifSource, ty
 
 const now = new Date("2026-11-14T08:00:00Z");
 const row = (o: Partial<NotifSource>): NotifSource => ({
-  id: "s1", status: "MENUNGGU", orderNo: "26-4001", spkNo: "26-4001", colorCode: "CM-415", processName: "PROOF REAKTIF",
+  id: "s1", status: "MENUNGGU", orderNo: "26-4001", spkNo: "26-4001", colorCode: "415", processName: "PROOF REAKTIF",
   isUrgent: false, createdAt: "2026-11-14T07:00:00Z", urgentAt: null, completedAt: null, processorName: null, ...o,
 });
 const types = (rows: NotifSource[], role: string) => deriveNotifications(rows, role, null, now).map((n) => n.type);
@@ -42,7 +42,7 @@ describe("deriveNotifications: notifikasi berbeda per peran (Sprint 3)", () => {
 
 describe("permintaan edit / hapus PPIC divalidasi lab (Sprint 4)", () => {
   const change = (o: Partial<ChangeSource>): ChangeSource => ({
-    id: "c1", sampleId: "s1", type: "EDIT", status: "PENDING", label: "Order 26-4001 · CM-415", reason: null, requesterName: "Rina",
+    id: "c1", sampleId: "s1", type: "EDIT", status: "PENDING", label: "Order 26-4001 · CM 415", reason: null, requesterName: "Rina",
     createdAt: "2026-11-14T07:00:00Z", decidedAt: null, decidedByName: null, decisionNote: null, ...o,
   });
 

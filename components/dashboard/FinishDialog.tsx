@@ -55,7 +55,7 @@ export function FinishDialog({ row, onSubmit, onClose }: { row: SampleRow; onSub
     });
   }
 
-  const label = `Order ${row.orderNo ?? row.spkNo}${row.colorCode ? ` · ${row.colorCode}` : ""}`;
+  const label = `Order ${row.orderNo ?? row.spkNo}${row.colorCode ? ` · CM ${row.colorCode}` : ""}`;
   return (
     <Modal title="Selesaikan pengajuan" subtitle={`${label} · diproses oleh ${row.processorName ?? "-"}`} icon={<CheckCircle2 className="h-5 w-5" aria-hidden />} onClose={onClose}>
       <div className="max-h-[75vh] space-y-4 overflow-y-auto p-6">

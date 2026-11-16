@@ -1,3 +1,5 @@
+import { sampleLabel } from "./codes";
+
 export type ViewMode = "OPERATOR" | "APPROVER" | "PLANNER" | "MONITOR";
 
 export interface SessionUser {
@@ -34,6 +36,8 @@ export const ROLE_SEED = [
 
 /** Peran yang berada di laboratorium: menerima notifikasi pengajuan masuk & urgent. */
 export const LAB_ROLES = ["OPERATOR_LAB", "KALAB", "KAUR_LAB", "KASI"];
+/** Laporan kinerja: PPIC dan seluruh kepala (operator & admin tidak). */
+export const REPORT_ROLES = ["PPIC", "KALAB", "KAUR_LAB", "KASI", "KEPALA_PPIC", "KEPALA_PRODUKSI_DF"];
 /** Kepala yang menerima notifikasi setiap pengajuan urgent. */
 export const URGENT_WATCH_ROLES = ["KEPALA_PPIC", "KEPALA_PRODUKSI_DF"];
 
@@ -123,7 +127,7 @@ export function deriveNotifications(rows: NotifSource[], roleCode: string, seenA
   const out: (Notif & { at: number })[] = [];
 
   for (const s of rows) {
-    const label = `Order ${s.orderNo ?? s.spkNo}${s.colorCode ? ` · ${s.colorCode}` : ""}`;
+    const label = sampleLabel(s);
     const active = ACTIVE.includes(s.status);
     const created = new Date(s.createdAt).getTime();
 

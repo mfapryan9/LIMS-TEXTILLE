@@ -121,12 +121,12 @@ async function main() {
     urgent?: boolean; trials?: Trial[]; color?: string; customer?: string; newToday?: boolean;
   };
   const examples: Example[] = [
-    { machine: "CPB", process: "TOPPING REAKTIF", recv: -8, due: -1, status: "DALAM_PROSES", trials: [{ running: true }], color: "CM-102", customer: "PT Sinar Tekstil" },
+    { machine: "CPB", process: "TOPPING REAKTIF", recv: -8, due: -1, status: "DALAM_PROSES", trials: [{ running: true }], color: "102", customer: "PT Sinar Tekstil" },
     { machine: "THERMOSOL", process: "PROOF DISPERSE", recv: -5, due: 2, status: "MENUNGGU", customer: "CV Buana Warna" },
     { machine: "STENTER", process: "RF + SHADING", recv: -6, due: 1, status: "MENUNGGU", trials: [{ decision: "REJECTED", note: "Shade kurang tua dibanding master" }] },
     { machine: "JET", process: "PROOF OPTIC", recv: -2, due: 5, status: "MENUNGGU", urgent: true, customer: "PT Indah Kain" },
     { machine: "WASHING", process: "STRIPPING", recv: -7, due: 0, status: "DALAM_PROSES", trials: [{ decision: "REJECTED", note: "Masih belang" }, {}] },
-    { machine: "CPB", process: "PROOF REAKTIF", recv: -1, due: 6, status: "MENUNGGU", color: "CM-204" },
+    { machine: "CPB", process: "PROOF REAKTIF", recv: -1, due: 6, status: "MENUNGGU", color: "204" },
     { machine: "THERMOSOL", process: "TOPPING DISPERSE", recv: -3, due: 4, status: "DALAM_PROSES", trials: [{ decision: "REJECTED", note: "Arah warna terlalu merah" }, { running: true }] },
     { machine: "STENTER", process: "SHADING", recv: -9, due: -2, status: "MENUNGGU" },
     { machine: "CPB", process: "PAD BLEACHING (LAB)", recv: -4, due: 3, status: "DALAM_PROSES", urgent: true, trials: [{ running: true }] },
@@ -134,7 +134,7 @@ async function main() {
     { machine: "JET", process: "LEVELLING", recv: -6, due: 1, status: "DALAM_PROSES", trials: [{}] },
     { machine: "WASHING", process: "CUCI PANAS (LAB)", recv: -2, due: 5, status: "MENUNGGU" },
     { machine: "STENTER", process: "PROOF FINISH", recv: -7, due: 0, status: "DISETUJUI", trials: [{ decision: "REJECTED", note: "Kurang tua" }, { decision: "REJECTED", note: "Kilap berbeda" }, { decision: "APPROVED", approver: "KADF" }] },
-    { machine: "CPB", process: "TOPPING REAKTIF", recv: -5, due: 2, status: "DISETUJUI", trials: [{ decision: "REJECTED", note: "Shade terlalu muda" }, { decision: "APPROVED" }], color: "CM-311" },
+    { machine: "CPB", process: "TOPPING REAKTIF", recv: -5, due: 2, status: "DISETUJUI", trials: [{ decision: "REJECTED", note: "Shade terlalu muda" }, { decision: "APPROVED" }], color: "311" },
   ];
 
   let n = 0;

@@ -131,7 +131,7 @@ export function ReportPanel({ rows, groups }: { rows: SampleRow[]; groups: Machi
               <li key={r.id} className="flex flex-wrap items-center justify-between gap-2 px-4 py-2.5 text-sm">
                 <span>
                   <span className="font-semibold text-ink">Order {r.orderNo ?? r.spkNo}</span>
-                  <span className="text-ink-muted">{r.colorCode ? ` · ${r.colorCode}` : ""}{r.customerName ? ` · ${r.customerName}` : ""}</span>
+                  <span className="text-ink-muted">{r.colorCode ? ` · CM ${r.colorCode}` : ""}{r.customerName ? ` · ${r.customerName}` : ""}</span>
                   <span className="block text-xs text-ink-soft">{STATUS_LABEL[r.status]}{r.processorName ? ` · ${r.processorName}` : ""} · diajukan {fmtStamp(r.createdAt)}</span>
                 </span>
                 <span className="rounded-full bg-rose-50 px-2.5 py-1 text-xs font-semibold text-rose-700 ring-1 ring-rose-200" suppressHydrationWarning>

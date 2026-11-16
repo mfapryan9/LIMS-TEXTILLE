@@ -1,3 +1,4 @@
+import { normalizeCm, normalizeMotif } from "./codes";
 /**
  * Menerjemahkan teks hasil OCR (Tesseract) dari SPK cetak menjadi isian form sampel.
  * Strategi:
@@ -123,9 +124,10 @@ function allDates(text: string): string[] {
 const clean = (v: string) =>
   v.replace(/^[\s:;=.\-–|]+/, "").replace(/[\s|;]+$/, "").replace(/\s{2,}/g, " ").trim();
 
+/** No. CM hanya angka (tanpa awalan "CM"), mis. "CM-102" → "102", "13944 / 3" → "13944/3". */
 function normalizeColorCode(v: string): string {
-  const m = v.match(/\bCM[\s\-.]?(\d{2,6})\b/i);
-  return m ? `CM-${m[1]}` : clean(v).toUpperCase();
+  const m = normalizeCm(clean(v)).match(/\d[\d/.\-]*/);
+  return m ? m[0].replace(/[/.\-]+$/, "") : "";
 }
 
 function normalizeSpk(v: string): string {
@@ -209,6 +211,7 @@ export function parseSpkText(
           if (/marketing/i.test(value)) set("orderType", "MARKETING");
           else if (/produksi|production/i.test(value)) set("orderType", "PRODUKSI");
           break;
+        case "motif": set("motif", normalizeMotif(clean(value))); break;
         default: set(hit.target, value);
       }
     }
@@ -217,7 +220,8 @@ export function parseSpkText(
   // ── Cadangan berbasis pola pada seluruh teks
   const spk = text.match(/\bSPK[\s\-/.]*\d[A-Z0-9\-/.]*/i); // mis. "SPK-2026-101", "SPK 2026/101"
   if (spk) set("spkNo", normalizeSpk(spk[0]));
-  if (!draft.colorCode && /\bCM[\s\-.]?\d{2,6}\b/i.test(text)) set("colorCode", normalizeColorCode(text));
+  const cm = text.match(/\bCM[\s\-.:]*(\d[\d/.\-]*)/i);
+  if (!draft.colorCode && cm) set("colorCode", normalizeColorCode(cm[1]));
   if (!draft.orderType) {
     if (/\bmarketing\b/i.test(text)) set("orderType", "MARKETING");
     else if (/\bproduksi\b/i.test(text)) set("orderType", "PRODUKSI");

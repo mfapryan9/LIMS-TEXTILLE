@@ -311,12 +311,13 @@ export function SampleTable({ rows, user, actions, highlightId, onEdit, canReord
 
   return (
     <div className="scrollbar-thin overflow-x-auto rounded-2xl bg-white shadow-card ring-1 ring-line">
-      <table className="w-full min-w-[72rem] text-sm">
+      <table className="w-full min-w-[80rem] text-sm">
         <caption className="sr-only">Pengajuan ke lab: urgent paling atas, lalu Critical Ratio terkecil</caption>
         <thead className="border-b border-line bg-surface/60 text-left text-[11px] font-semibold uppercase tracking-wider text-ink-soft">
           <tr>
             <th scope="col" className="w-12 px-4 py-3">#</th>
             <th scope="col" className="px-4 py-3">Order / Warna</th>
+            <th scope="col" className="px-4 py-3">Customer</th>
             <th scope="col" className="px-4 py-3">Mesin · Proses</th>
             <th scope="col" className="px-4 py-3">Due date</th>
             <th scope="col" className="px-4 py-3">Prioritas</th>
@@ -336,13 +337,15 @@ export function SampleTable({ rows, user, actions, highlightId, onEdit, canReord
                 </td>
                 <td className="min-w-[11rem] max-w-[18rem] px-4 py-4">
                   <p className="font-semibold text-ink">Order {r.orderNo ?? r.spkNo}</p>
-                  {r.customerName && <p className="text-xs font-medium text-ink-muted">{r.customerName}</p>}
                   {r.spkNo !== r.orderNo && <p className="text-xs text-ink-soft">SPK {r.spkNo}</p>}
                   {r.colorCode && <p className="mt-0.5 text-xs font-medium text-ink">No. CM {r.colorCode}{r.colorName ? <span className="font-normal text-ink-muted"> · {r.colorName}</span> : null}</p>}
                   {r.motif && <p className="text-xs text-ink-muted">Motif {r.motif}</p>}
                   {r.parties.length > 0 && <PartyChips parties={r.parties} />}
                   {r.colorDirection && <p className="text-xs text-ink-muted">Warna: {r.colorDirection}</p>}
                   {r.problemDescription && <p className="line-clamp-2 text-xs text-ink-muted" title={r.problemDescription}>Order: {r.problemDescription}</p>}
+                </td>
+                <td className="max-w-[12rem] px-4 py-4">
+                  {r.customerName ? <p className="font-medium text-ink">{r.customerName}</p> : <p className="text-xs text-ink-soft">–</p>}
                 </td>
                 <td className="px-4 py-4">
                   <MachineChip name={r.machineName} color={r.machineColor} />

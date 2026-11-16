@@ -1,3 +1,5 @@
+import { isValidCm, normalizeCm, normalizeMotif } from "./codes";
+
 /** Data form tambah / edit SPK. Divalidasi ulang di server (jangan percaya input client). */
 export interface SampleInput {
   orderType: "PRODUKSI" | "MARKETING";
@@ -44,9 +46,9 @@ export function validateSampleInput(raw: SampleInput): { error: string } | { dat
     orderDate: t(raw.orderDate),
     spkNo: t(raw.spkNo).toUpperCase(),
     customerName: t(raw.customerName),
-    motif: t(raw.motif),
+    motif: normalizeMotif(t(raw.motif)),
     colorDirection: t(raw.colorDirection),
-    colorCode: t(raw.colorCode).toUpperCase(),
+    colorCode: normalizeCm(t(raw.colorCode)),
     colorName: t(raw.colorName),
     // Partai: rapikan, buang yang kosong / ganda (urutan dipertahankan)
     parties: Array.from(new Set((Array.isArray(raw.parties) ? raw.parties : []).map((p) => t(p).toUpperCase()).filter(Boolean))),
@@ -67,6 +69,7 @@ export function validateSampleInput(raw: SampleInput): { error: string } | { dat
   // Sprint 3: pengajuan PPIC diidentifikasi No. Order + CM warna; No. SPK mengikuti No. Order bila kosong
   if (!data.orderNo) return { error: "Nomor Order wajib diisi" };
   if (!data.colorCode) return { error: "No. CM wajib diisi" };
+  if (!isValidCm(data.colorCode)) return { error: "No. CM diisi angka saja, mis. 13944/3" };
   if (data.customerName.length < 2) return { error: "Nama customer wajib diisi" };
   if (data.parties.length > 30) return { error: "Maksimal 30 partai per pengajuan" };
   if (data.parties.some((p) => p.length > 40)) return { error: "Nomor partai maksimal 40 karakter" };

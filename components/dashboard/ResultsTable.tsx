@@ -64,11 +64,12 @@ export function ResultsTable({ rows, groups }: { rows: SampleRow[]; groups: Mach
         </div>
       ) : (
         <div className="scrollbar-thin overflow-x-auto rounded-2xl bg-white shadow-card ring-1 ring-line">
-          <table className="w-full min-w-[62rem] text-sm">
+          <table className="w-full min-w-[70rem] text-sm">
             <caption className="sr-only">Hasil uji yang sudah di-ACC, terbaru di atas</caption>
             <thead className="border-b border-line bg-surface/60 text-left text-[11px] font-semibold uppercase tracking-wider text-ink-soft">
               <tr>
                 <th scope="col" className="px-4 py-3">SPK / Order</th>
+                <th scope="col" className="px-4 py-3">Customer</th>
                 <th scope="col" className="px-4 py-3">Mesin · Proses</th>
                 <th scope="col" className="whitespace-nowrap px-4 py-3">Diajukan → selesai</th>
                 <th scope="col" className="px-4 py-3 text-right">Durasi</th>
@@ -82,12 +83,12 @@ export function ResultsTable({ rows, groups }: { rows: SampleRow[]; groups: Mach
                 <tr key={r.id} className="align-top transition-colors hover:bg-canvas/60">
                   <td className="px-4 py-4">
                     <p className="font-semibold text-ink">Order {r.orderNo ?? r.spkNo}</p>
-                    {r.customerName && <p className="text-xs font-medium text-ink-muted">{r.customerName}</p>}
                     {r.spkNo !== r.orderNo && <p className="mt-0.5 whitespace-nowrap text-xs text-ink-muted">SPK {r.spkNo}{r.orderDate ? ` · ${fmtDate(r.orderDate)}` : ""}</p>}
                     {r.colorCode && <p className="text-xs text-ink-muted">No. CM {r.colorCode}{r.colorName ? ` · ${r.colorName}` : ""}</p>}
                     {r.parties.length > 0 && <PartyChips parties={r.parties} />}
                     {r.requesterName && <p className="text-xs text-ink-soft">Pengaju: {r.requesterName}</p>}
                   </td>
+                  <td className="max-w-[12rem] px-4 py-4">{r.customerName ? <span className="font-medium text-ink">{r.customerName}</span> : <span className="text-xs text-ink-soft">–</span>}</td>
                   <td className="px-4 py-4">
                     <MachineChip name={r.machineName} color={r.machineColor} />
                     <p className="mt-1.5 text-ink">{r.processName}</p>

@@ -7,6 +7,7 @@ import { prisma } from "@/lib/prisma";
 import { assertCan } from "@/lib/roles";
 import { buildStandardTimeMap, sortByPriority, todayJakarta, withCR } from "@/lib/cr";
 import { isProcessorGroup } from "@/lib/processors";
+import { sampleLabel } from "@/lib/codes";
 import { validateSampleInput, type SampleFormResult, type SampleInput } from "@/lib/sample-input";
 
 /**
@@ -248,7 +249,7 @@ export async function createSample(input: SampleInput): Promise<SampleFormResult
 // ───────────── Edit / hapus pengajuan: diminta PPIC, berlaku setelah divalidasi lab ─────────────
 
 type DiffItem = { field: string; before: string; after: string };
-const labelOf = (s: { orderNo: string | null; spkNo: string; colorCode: string | null }) => `Order ${s.orderNo ?? s.spkNo}${s.colorCode ? ` · ${s.colorCode}` : ""}`;
+const labelOf = sampleLabel;
 const dateStr = (d: Date | null) => (d ? d.toISOString().slice(0, 10) : "");
 
 /** Daftar kolom yang berubah (ditampilkan ke lab saat validasi). */

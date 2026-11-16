@@ -5,6 +5,7 @@ import { Camera, Check, List, Loader2, Pencil, Plus, ScanLine, Sparkles, Upload,
 import { defaultDueDate } from "@/lib/cr";
 import type { SampleFormResult, SampleInput, SampleTextField } from "@/lib/sample-input";
 import { parseSpkText, type SpkField } from "@/lib/spk-parse";
+import { normalizeCm, normalizeMotif } from "@/lib/codes";
 
 type Option = { id: string; name: string };
 
@@ -232,7 +233,7 @@ export function SampleForm(props: {
       // SPK yang sama, warna berikutnya: pertahankan data SPK, kosongkan data warna
       setValues((v) => ({ ...v, colorCode: "", colorName: "", colorDirection: "", parties: [""] }));
       setFound((f) => new Set(Array.from(f).filter((k) => !["colorCode", "colorName", "colorDirection", "parties"].includes(k))));
-      setNotice(`Terkirim: order ${values.orderNo}${values.colorCode ? ` · ${values.colorCode}` : ""}. Lanjutkan isi No. CM berikutnya.`);
+      setNotice(`Terkirim: order ${values.orderNo}${values.colorCode ? ` · CM ${normalizeCm(values.colorCode)}` : ""}. Lanjutkan isi No. CM berikutnya.`);
     });
   }
 
@@ -322,9 +323,11 @@ export function SampleForm(props: {
               <Field fromPhoto={found.has("requesterName" as SpkField)} label="Nama pengaju">{text("requesterName", "Nama yang mengajukan")}</Field>
               <Field fromPhoto={found.has("customerName" as SpkField)} label="Nama customer">{text("customerName", "mis. PT Sinar Tekstil")}</Field>
               <Field fromPhoto={found.has("orderNo" as SpkField)} label="Nomor Order">{text("orderNo", "mis. 26-3012")}</Field>
-              <Field fromPhoto={found.has("colorCode" as SpkField)} label="No. CM">{text("colorCode", "mis. CM-102")}</Field>
+              <Field fromPhoto={found.has("colorCode" as SpkField)} label="No. CM"><input value={values.colorCode} onChange={(e) => set("colorCode", e.target.value)} onBlur={(e) => set("colorCode", normalizeCm(e.target.value))}
+                  inputMode="decimal" placeholder="angka saja, mis. 13944/3" className={ring("colorCode")} /></Field>
               <Field fromPhoto={found.has("colorName" as SpkField)} label="Warna">{text("colorName", "mis. Merah marun")}</Field>
-              <Field fromPhoto={found.has("motif" as SpkField)} label="Motif (opsional)">{text("motif", "mis. polos / batik")}</Field>
+              <Field fromPhoto={found.has("motif" as SpkField)} label="Motif (opsional)"><input value={values.motif} onChange={(e) => set("motif", e.target.value)} onBlur={(e) => set("motif", normalizeMotif(e.target.value))}
+                  placeholder="mis. TR-62" className={ring("motif")} /></Field>
               <div className="text-sm sm:col-span-2">
                 <span className="mb-1.5 flex items-center gap-2 font-medium text-ink">
                   Partai (opsional)

@@ -48,7 +48,7 @@ describe("parseSpkText", () => {
       spkNo: "SPK-2026-130",
       customerName: "PT Sinar Tekstil",
       motif: "Batik Parang",
-      colorCode: "CM-415",
+      colorCode: "415",
       colorDirection: "Lebih biru",
       processTypeId: "p2",
       machineId: "m2",
@@ -63,7 +63,7 @@ describe("parseSpkText", () => {
     const { draft } = parseSpkText(text, masters);
     expect(draft.customerName).toBe("CV Buana Warna");
     expect(draft.motif).toBe("Floral");
-    expect(draft.colorCode).toBe("CM-204");
+    expect(draft.colorCode).toBe("204");
     expect(draft.orderType).toBe("PRODUKSI");
   });
 
@@ -92,7 +92,7 @@ describe("parseSpkText", () => {
     const text = "SPK-2026-140\nwarna cm-777 jet dyeing jd01\n01/11/2026 sampai 08/11/2026";
     const { draft } = parseSpkText(text, masters);
     expect(draft.spkNo).toBe("SPK-2026-140");
-    expect(draft.colorCode).toBe("CM-777");
+    expect(draft.colorCode).toBe("777");
     expect(draft.machineId).toBe("m1");
     expect(draft.receivedDate).toBe("2026-11-01");
     expect(draft.dueDate).toBe("2026-11-08");
@@ -118,7 +118,7 @@ describe("parseSpkText: kartu pengajuan (Nomor Order, No. CM, Warna, Partai, Nam
   it("membaca label baru sesuai kartu", () => {
     expect(draft.requesterName).toBe("Rina Wulandari");
     expect(draft.orderNo).toBe("26-4010");
-    expect(draft.colorCode).toBe("CM-415");
+    expect(draft.colorCode).toBe("415");
     expect(draft.colorName).toBe("Merah Marun");
     expect(draft.processTypeId).toBe("p1");
     expect(draft.dueDate).toBe("2026-11-20");

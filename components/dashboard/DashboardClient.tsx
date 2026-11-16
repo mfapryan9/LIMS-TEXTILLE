@@ -5,7 +5,7 @@ import { BadgeCheck, BarChart3, CalendarDays, FilePlus2, KeyRound, ListChecks, L
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import type { Notif, SessionUser, ViewMode } from "@/lib/roles";
-import { VIEW_DEFAULT_STATUSES } from "@/lib/roles";
+import { REPORT_ROLES, VIEW_DEFAULT_STATUSES } from "@/lib/roles";
 import { defaultDueDate, todayJakarta, type SampleStatusKey } from "@/lib/cr";
 import type { SampleFormResult, SampleInput } from "@/lib/sample-input";
 import { initials, type SampleRow } from "./badges";
@@ -60,6 +60,7 @@ export function DashboardClient(props: {
   const canEdit = !!editor && user.canEditSample;
   const showResults = user.viewMode !== "OPERATOR";
   const showUsers = !!userAdmin && user.canManageUsers;
+  const showReport = REPORT_ROLES.includes(user.roleCode); // PPIC & kepala; operator tidak
   const [tab, setTab] = useState<"queue" | "results" | "report" | "users">("queue");
   const [pwOpen, setPwOpen] = useState(false);
   const pageTitle = tab === "results" ? "Hasil uji selesai" : tab === "report" ? "Laporan kinerja" : tab === "users" ? "Kelola pengguna" : copy.title;
@@ -121,7 +122,7 @@ export function DashboardClient(props: {
   const nav = [
     { key: "queue" as const, label: "Pengajuan lab", icon: ListChecks, count: activeCount as number | null },
     ...(showResults ? [{ key: "results" as const, label: "Hasil uji selesai", icon: BadgeCheck, count: doneCount as number | null }] : []),
-    { key: "report" as const, label: "Laporan kinerja", icon: BarChart3, count: null as number | null },
+    ...(showReport ? [{ key: "report" as const, label: "Laporan kinerja", icon: BarChart3, count: null as number | null }] : []),
     ...(showUsers ? [{ key: "users" as const, label: "Kelola pengguna", icon: Users, count: userAdmin!.users.filter((u) => u.isActive).length as number | null }] : []),
   ];
   const roleLabel = user.roleCode.replaceAll("_", " ").toLowerCase();
@@ -278,7 +279,7 @@ export function DashboardClient(props: {
           <UsersPanel admin={userAdmin} meId={user.id} />
         ) : tab === "results" ? (
           <ResultsTable rows={rows} groups={machines} />
-        ) : tab === "report" ? (
+        ) : tab === "report" && showReport ? (
           <ReportPanel rows={rows} groups={machines} />
         ) : (
           <>
