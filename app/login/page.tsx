@@ -9,7 +9,7 @@ export const dynamic = "force-dynamic";
 const FEATURES = [
   { icon: Gauge, title: "Prioritas Critical Ratio", text: "Antrean otomatis berdasarkan CR hari ini per kelompok mesin." },
   { icon: Zap, title: "Pengajuan PPIC & Urgent", text: "PPIC mengajukan ke lab; urgent langsung teratas dan dipantau kepala." },
-  { icon: ScanLine, title: "Scan/Upload Permintaan Pengujian", text: "Foto atau PDF permintaan pengujian, kolom terisi otomatis lalu tinggal diperiksa." },
+  { icon: ScanLine, title: "Scan/Upload Permintaan Pengujian", text: "Foto atau file QRP permintaan pengujian, kolom terisi otomatis lalu tinggal diperiksa." },
   { icon: Camera, title: "Foto Hasil Uji", text: "Lab memproses per grup dan menyelesaikan dengan foto resep hasil uji." },
   { icon: BarChart3, title: "Laporan Kinerja & Excel", text: "Rekap kinerja lab per rentang tanggal dan unduh data ke Excel." },
 ];

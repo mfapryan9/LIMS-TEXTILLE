@@ -6,7 +6,7 @@ import { defaultDueDate } from "@/lib/cr";
 import type { SampleFormResult, SampleInput, SampleTextField } from "@/lib/sample-input";
 import { parseSpkText, type SpkField } from "@/lib/spk-parse";
 import { normalizeCm, normalizeMotif } from "@/lib/codes";
-import { isPdf, readPdf } from "@/lib/pdf-read";
+import { isQrp, parseQrp, qrpPageText, renderQrpPage } from "@/lib/qrp-read";
 
 type Option = { id: string; name: string };
 
@@ -110,7 +110,7 @@ const primaryBtn = "inline-flex items-center justify-center gap-2 rounded-xl bg-
 const ghostBtn = "inline-flex items-center justify-center gap-2 rounded-xl bg-white px-4 py-2.5 text-sm font-semibold text-ink ring-1 ring-line transition hover:bg-canvas focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand-600 disabled:opacity-50";
 const fieldCls = "w-full rounded-xl border bg-white px-3.5 py-2.5 text-sm text-ink placeholder:text-ink-soft transition focus-visible:border-brand-500 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-brand-100";
 
-/** Label + penanda "dari scan" untuk kolom yang diisi dari foto / PDF. Di luar SampleForm agar input tidak di-mount ulang tiap ketikan. */
+/** Label + penanda "dari scan" untuk kolom yang diisi dari foto / file QRP. Di luar SampleForm agar input tidak di-mount ulang tiap ketikan. */
 function Field({ fromPhoto, label, children, hint }: { fromPhoto: boolean; label: string; children: ReactNode; hint?: string }) {
   return (
     <label className="block text-sm">
@@ -203,18 +203,16 @@ export function SampleForm(props: {
     setCamera(false);
     setError(null);
     setNotice(null);
-    const pdf = src instanceof File && isPdf(src);
-    setOcr({ state: "running", progress: 0, label: pdf ? "Membaca PDF" : "Menyiapkan gambar", text: "" });
+    const qrp = src instanceof File && isQrp(src);
+    setOcr({ state: "running", progress: 0, label: qrp ? "Membaca file QRP" : "Menyiapkan gambar", text: "" });
     try {
       let text = "";
       let pages: HTMLCanvasElement[] = [];
-      if (pdf) {
-        // PDF digital: teks diambil langsung; PDF hasil scan: tiap halaman (maks. 3) dibaca OCR
-        const doc = await readPdf(src as File);
-        if (!doc.pages.length) throw new Error("PDF kosong");
-        setPreview(doc.pages[0].toDataURL("image/jpeg", 0.8));
-        if (doc.text) text = doc.text;
-        else for (const pg of doc.pages) pages.push(await prepareImage(pg));
+      if (qrp) {
+        // File QuickReport dari sistem perusahaan: teks diambil langsung dari halaman pertama, tanpa OCR
+        const page = parseQrp(await (src as File).arrayBuffer())[0];
+        setPreview(renderQrpPage(page).toDataURL("image/png"));
+        text = qrpPageText(page);
       } else {
         const canvas = await prepareImage(src);
         setPreview(canvas.toDataURL("image/jpeg", 0.8));
@@ -248,12 +246,12 @@ export function SampleForm(props: {
       if (f.includes("processTypeId" as SpkField)) setAddProcess(false);
       setFound(new Set(f));
       setOcr({ state: "done", progress: 1, label: "", text });
-      setNotice(f.length ? `${f.length} kolom terisi dari ${pdf ? "PDF" : "foto"}. Periksa kembali sebelum menyimpan.` : "Teks terbaca, tetapi tidak ada kolom yang dikenali. Isi form secara manual.");
+      setNotice(f.length ? `${f.length} kolom terisi dari ${qrp ? "file QRP" : "foto"}. Periksa kembali sebelum menyimpan.` : "Teks terbaca, tetapi tidak ada kolom yang dikenali. Isi form secara manual.");
     } catch (e) {
       console.error(e);
       setOcr({ state: "error", progress: 0, label: "", text: "" });
-      setError(pdf
-        ? "PDF gagal dibaca. Pastikan file tidak rusak atau terkunci password, lalu coba lagi."
+      setError(qrp
+        ? "File QRP gagal dibaca. Pastikan file berasal dari cetakan Permintaan Pengujian sistem perusahaan dan tidak rusak."
         : "Foto gagal dibaca. Pastikan koneksi internet aktif (data bahasa OCR diunduh saat pertama kali) lalu coba lagi.");
     }
   }
@@ -291,7 +289,7 @@ export function SampleForm(props: {
             </span>
             <div>
               <h2 className="text-lg font-bold text-ink">{mode === "create" ? "Ajukan ke Lab" : `Edit pengajuan order ${props.initial.orderNo || props.initial.spkNo}`}</h2>
-              <p className="text-xs text-ink-muted">{mode === "create" ? "Isi data pengajuan, atau scan / upload permintaan pengujian (foto atau PDF) untuk mengisi otomatis, lalu periksa sebelum mengirim." : "Perubahan dikirim ke bagian lab dan baru berlaku setelah divalidasi. Semua perubahan dicatat di audit log."}</p>
+              <p className="text-xs text-ink-muted">{mode === "create" ? "Isi data pengajuan, atau scan / upload permintaan pengujian (foto atau file QRP) untuk mengisi otomatis, lalu periksa sebelum mengirim." : "Perubahan dikirim ke bagian lab dan baru berlaku setelah divalidasi. Semua perubahan dicatat di audit log."}</p>
             </div>
           </div>
           <button type="button" onClick={onClose} className="rounded-xl p-2 text-ink-soft transition hover:bg-canvas hover:text-ink" aria-label="Tutup">
@@ -315,7 +313,7 @@ export function SampleForm(props: {
                     <div className="px-6 text-center">
                       <span className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-white text-brand-600 shadow-card"><Camera className="h-7 w-7" aria-hidden /></span>
                       <p className="mt-3 text-sm font-semibold text-ink">Scan / upload permintaan pengujian</p>
-                      <p className="mt-1 text-xs text-ink-soft">Foto (JPG/PNG) atau PDF. Kolom di samping terisi otomatis dan tetap bisa diedit.</p>
+                      <p className="mt-1 text-xs text-ink-soft">Foto (JPG/PNG) atau file .QRP dari sistem. Kolom di samping terisi otomatis dan tetap bisa diedit.</p>
                     </div>
                   )}
                   {ocr.state === "running" && (
@@ -335,7 +333,7 @@ export function SampleForm(props: {
                   </button>
                   <label className={`${ghostBtn} cursor-pointer`}>
                     <Upload className="h-4 w-4" aria-hidden /> Unggah
-                    <input type="file" accept="image/*,application/pdf,.pdf" className="sr-only" disabled={ocr.state === "running"}
+                    <input type="file" accept="image/*,.qrp,.QRP" className="sr-only" disabled={ocr.state === "running"}
                       onChange={(e) => { const f = e.target.files?.[0]; e.target.value = ""; if (f) scan(f); }} />
                   </label>
                 </div>

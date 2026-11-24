@@ -1,6 +1,6 @@
 import { normalizeCm, normalizeMotif } from "./codes";
 /**
- * Menerjemahkan teks hasil OCR (Tesseract) dari SPK cetak menjadi isian form sampel.
+ * Menerjemahkan teks permintaan pengujian (hasil OCR foto atau teks file .QRP) menjadi isian form sampel.
  * Strategi:
  *   1. Baris berlabel ("No. SPK : ...", "Customer: ...") → nilai setelah label.
  *      Label tanpa nilai di barisnya → ambil baris berikutnya.
@@ -46,17 +46,17 @@ const LABELS: [LabelTarget, string[]][] = [
   ["parties", ["nomor partai", "no. partai", "no.partai", "no partai", "partai", "lot", "batch"]],
   ["orderDate", ["tanggal order", "tgl. order", "tgl order"]],
   // Kolom kartu SPK yang bukan input form; dikenali agar tidak tertangkap label lain ("tgl", "date")
-  ["ignore", ["tanggal mulai", "tgl. mulai", "tgl mulai", "tanggal selesai", "tgl. selesai", "tgl selesai", "duration", "durasi", "overdue", "critical ratio", "processing time"]],
+  ["ignore", ["tanggal mulai", "tgl. mulai", "tgl mulai", "tanggal selesai", "tgl. selesai", "tgl selesai", "duration", "durasi", "overdue", "critical ratio", "processing time", "deskripsi hasil", "mengetahui"]],
   ["spkNo", ["nomor spk", "no. spk", "no.spk", "no spk", "spk no", "spk"]],
   ["customerName", ["nama customer", "nama pelanggan", "customer", "pelanggan", "buyer", "konsumen"]],
   // Sprint 3: "Deskripsi warna" disimpan di kolom arah warna, "Deskripsi order" di keterangan problem
   ["colorDirection", ["deskripsi warna", "keterangan warna", "arah warna", "color direction", "arah"]],
-  ["problemDescription", ["deskripsi order", "keterangan order", "deskripsi", "keterangan", "description"]],
+  ["problemDescription", ["deskripsi order", "keterangan order", "jenis problem", "deskripsi", "keterangan", "description"]],
   ["colorCode", ["nomor cm", "no. cm", "no.cm", "no cm", "cm warna", "kode warna", "color code", "kode cm", "no. warna", "no warna"]],
   // "Warna" saja = nama warna (dicek setelah label No. CM / kode warna)
   ["colorName", ["nama warna", "warna", "color"]],
   ["motif", ["motif", "desain", "design", "corak"]],
-  ["process", ["jenis proses", "proses lab", "proses", "process"]],
+  ["process", ["jenis proses", "proses laboratorium", "proses laborat", "proses lab", "proses", "process"]],
   ["machine", ["mesin", "machine"]],
   ["fabricProblem", ["problem kain", "masalah kain", "problem", "kendala"]],
   ["dueDate", ["due date", "deadline", "jatuh tempo", "tanggal kirim", "tgl kirim", "tgl. kirim", "target"]],
