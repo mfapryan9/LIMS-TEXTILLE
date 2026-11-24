@@ -20,7 +20,7 @@ export interface SessionUser {
 /**
  * Seed untuk tabel roles (aktor Sprint 4).
  * - Kepala Produksi DF, Kepala PPIC, Kepala Laboratorium: memantau, melihat laporan kinerja, dan mengintervensi
- *   (membatalkan) urgent. Kepala PPIC juga dapat menghapus data pengajuan; Kepala Laboratorium mengelola akun.
+ *   (membatalkan) urgent. Kepala PPIC juga mengatur urutan urgent dan menghapus data pengajuan; Kepala Laboratorium mengelola akun.
  * - Kepala Seksi PPIC & Kepala Urusan PPIC: mengoperasikan sisi PPIC (mengajukan ke lab, minta edit/hapus, urutan urgent) + laporan kinerja.
  * - Kepala Seksi Laboratorium: mengoperasikan sisi lab (proses, selesai + foto, validasi edit/hapus) + laporan kinerja.
  * - Admin Lab: mengoperasikan sisi lab, tanpa laporan kinerja.
@@ -59,8 +59,9 @@ export type Permission =
 /** Bagian lab: memvalidasi permintaan edit/hapus PPIC. */
 export const isLabRole = (roleCode: string) => LAB_ROLES.includes(roleCode);
 
-/** PPIC (Kasi & Kaur): mengatur urutan antar-pengajuan urgent karena PPIC yang mengetahui kebutuhan produksi. */
-export const isPpicRole = (roleCode: string) => PPIC_ROLES.includes(roleCode);
+/** Seluruh PPIC (Kepala, Kasi, Kaur): mengatur urutan antar-pengajuan urgent karena PPIC yang mengetahui kebutuhan produksi. */
+export const URGENT_ORDER_ROLES = ["KEPALA_PPIC", ...PPIC_ROLES];
+export const canReorderUrgent = (roleCode: string) => URGENT_ORDER_ROLES.includes(roleCode);
 
 /** Menghapus data pengajuan secara langsung (tanpa validasi lab), status apa pun: hanya Kepala PPIC. */
 export const SAMPLE_DELETE_ROLES = ["KEPALA_PPIC"];
@@ -76,7 +77,7 @@ export function assertCan(user: SessionUser, action: Permission) {
     (action === "manageUsers" && user.canManageUsers) ||
     (action === "manageMaster" && user.canManageMaster) ||
     (action === "validateChange" && isLabRole(user.roleCode)) ||
-    (action === "reorderUrgent" && isPpicRole(user.roleCode)) ||
+    (action === "reorderUrgent" && canReorderUrgent(user.roleCode)) ||
     (action === "deleteSample" && canDeleteSample(user.roleCode));
   if (!ok) throw new Error("FORBIDDEN");
 }

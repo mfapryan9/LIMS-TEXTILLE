@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { ArrowDown, ArrowUp, Check, CheckCircle2, ChevronsUp, Hourglass, Inbox, Pencil, Play, ShieldCheck, Timer, Trash2, UserRound, Users, X, ZapOff } from "lucide-react";
-import { canDeleteSample, isLabRole, isPpicRole, type SessionUser } from "@/lib/roles";
+import { canDeleteSample, canReorderUrgent, isLabRole, type SessionUser } from "@/lib/roles";
 import { PROCESSOR_GROUP_NAMES } from "@/lib/processors";
 import { fmtHours } from "@/lib/report";
 import { CrBadge, MachineChip, StatusBadge, UrgentBadge, fmtDays, rowAccent, type SampleRow } from "./badges";
@@ -322,7 +322,7 @@ export function SampleTable({ rows, user, actions, highlightId, onEdit, canReord
     );
 
   const urgentIds = rows.filter((r) => r.isUrgent && r.status !== "DISETUJUI").map((r) => r.id);
-  const reorder = canReorder && isPpicRole(user.roleCode) && urgentIds.length > 1;
+  const reorder = canReorder && canReorderUrgent(user.roleCode) && urgentIds.length > 1;
 
   return (
     <div className="scrollbar-thin overflow-x-auto rounded-2xl bg-white shadow-card ring-1 ring-line">

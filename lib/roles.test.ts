@@ -75,14 +75,15 @@ describe("permintaan edit / hapus PPIC divalidasi lab (Sprint 4)", () => {
     expect(() => assertCan(u("KAUR_PPIC", "PLANNER"), "validateChange")).toThrow("FORBIDDEN");
   });
 
-  it("hanya Kasi dan Kaur PPIC yang boleh menggeser urutan urgent", () => {
+  it("hanya PPIC (Kepala, Kasi, Kaur) yang boleh menggeser urutan urgent", () => {
     const u = (roleCode: string, viewMode: SessionUser["viewMode"]) => ({ roleCode, viewMode } as SessionUser);
     expect(() => assertCan(u("KASI_PPIC", "PLANNER"), "reorderUrgent")).not.toThrow();
     expect(() => assertCan(u("KAUR_PPIC", "PLANNER"), "reorderUrgent")).not.toThrow();
+    expect(() => assertCan(u("KEPALA_PPIC", "MONITOR"), "reorderUrgent")).not.toThrow();
+    expect(() => assertCan(u("KEPALA_PRODUKSI_DF", "MONITOR"), "reorderUrgent")).toThrow("FORBIDDEN");
     expect(() => assertCan(u("KASI_LAB", "OPERATOR"), "reorderUrgent")).toThrow("FORBIDDEN");
     expect(() => assertCan(u("ADMIN_LAB", "OPERATOR"), "reorderUrgent")).toThrow("FORBIDDEN");
     expect(() => assertCan(u("KALAB", "MONITOR"), "reorderUrgent")).toThrow("FORBIDDEN");
-    expect(() => assertCan(u("KEPALA_PPIC", "MONITOR"), "reorderUrgent")).toThrow("FORBIDDEN");
   });
 
   it("hanya Kepala PPIC yang boleh menghapus data pengajuan secara langsung", () => {

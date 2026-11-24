@@ -50,7 +50,7 @@ export function roleAccess(r: RoleOption): { label: string; tone: string; text: 
       text: r.canManageUsers
         ? "Monitoring, laporan kinerja, membatalkan urgent, dan kelola akun pengguna"
         : SAMPLE_DELETE_ROLES.includes(r.code)
-          ? "Monitoring, laporan kinerja, membatalkan urgent, dan menghapus data pengajuan"
+          ? "Monitoring, laporan kinerja, membatalkan urgent, mengatur urutan urgent, dan menghapus data pengajuan"
           : "Monitoring, laporan kinerja, dan membatalkan urgent",
     };
   return { label: "Monitor", tone: "bg-stone-100 text-stone-700 ring-stone-300", text: "Hanya pantau pengajuan & hasil uji" };
