@@ -8,6 +8,7 @@ import { assertCan } from "@/lib/roles";
 import { buildStandardTimeMap, sortByPriority, todayJakarta, withCR } from "@/lib/cr";
 import { isProcessorGroup } from "@/lib/processors";
 import { sampleLabel } from "@/lib/codes";
+import { createdAtRange } from "@/lib/bulk-delete";
 import { validateSampleInput, type SampleFormResult, type SampleInput } from "@/lib/sample-input";
 
 /**
@@ -341,6 +342,57 @@ export async function deleteSample(sampleId: string, reason: string): Promise<Ac
     await tx.sample.delete({ where: { id: s.id } }); // uji & foto ikut terhapus (cascade), relasi audit_logs → null
     return { ok: true };
   }, { timeout: 20000 });
+  if (res.ok) revalidatePath("/");
+  return res;
+}
+
+export type BulkPreview = { ok: true; total: number; waiting: number; inProcess: number; done: number; photos: number } | { ok: false; error: string };
+export type BulkResult = { ok: true; deleted: number } | { ok: false; error: string };
+
+/** Kepala PPIC: hitung pengajuan pada rentang tanggal pengajuan (WIB) sebelum dihapus massal. */
+export async function previewBulkDelete(from: string, to: string): Promise<BulkPreview> {
+  const user = await getSessionUser();
+  assertCan(user, "deleteSample");
+  const r = createdAtRange(from, to);
+  if (!r.ok) return r;
+  const where = { createdAt: { gte: r.gte, lt: r.lt } };
+  const [groups, photos] = await Promise.all([
+    prisma.sample.groupBy({ by: ["status"], where, _count: { _all: true } }),
+    prisma.resultPhoto.count({ where: { sample: where } }),
+  ]);
+  const n = (...st: string[]) => groups.filter((g) => st.includes(g.status)).reduce((a, g) => a + g._count._all, 0);
+  const total = groups.reduce((a, g) => a + g._count._all, 0);
+  return { ok: true, total, waiting: n("MENUNGGU"), inProcess: n("DALAM_PROSES"), done: total - n("MENUNGGU", "DALAM_PROSES"), photos };
+}
+
+/**
+ * Kepala PPIC: hapus semua pengajuan pada rentang tanggal pengajuan (WIB). Wajib alasan. `expected` = jumlah yang
+ * dilihat di pratinjau; bila data berubah sejak dicek, penghapusan dibatalkan agar tidak menghapus lebih dari yang dikonfirmasi.
+ * Salinan setiap pengajuan disimpan di audit log; data uji & foto ikut terhapus.
+ */
+export async function deleteSamplesByDate(from: string, to: string, reason: string, expected: number): Promise<BulkResult> {
+  const user = await getSessionUser();
+  assertCan(user, "deleteSample");
+  const why = String(reason ?? "").trim().slice(0, 300);
+  if (!why) return { ok: false, error: "Alasan penghapusan wajib diisi" };
+  const r = createdAtRange(from, to);
+  if (!r.ok) return r;
+  const res = await prisma.$transaction(async (tx): Promise<BulkResult> => {
+    const list = await tx.sample.findMany({ where: { createdAt: { gte: r.gte, lt: r.lt } } });
+    if (list.length !== expected) return { ok: false, error: "Jumlah data berubah sejak dicek. Cek jumlah data lagi sebelum menghapus." };
+    if (!list.length) return { ok: true, deleted: 0 };
+    const ids = list.map((s) => s.id);
+    await tx.changeRequest.deleteMany({ where: { sampleId: { in: ids }, status: "PENDING" } });
+    await tx.auditLog.createMany({
+      data: list.map((s) => ({
+        userId: user.id, sampleId: s.id, action: "SAMPLE_DELETED", entity: "Sample", entityId: s.id,
+        before: JSON.parse(JSON.stringify(s)) as Prisma.InputJsonValue,
+        after: { reason: why, deletedBy: user.roleCode, bulk: { from, to, total: list.length } },
+      })),
+    });
+    const del = await tx.sample.deleteMany({ where: { id: { in: ids } } }); // uji & foto ikut terhapus (cascade)
+    return { ok: true, deleted: del.count };
+  }, { timeout: 60000 });
   if (res.ok) revalidatePath("/");
   return res;
 }

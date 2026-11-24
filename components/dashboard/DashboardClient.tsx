@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { BadgeCheck, BarChart3, CalendarDays, FilePlus2, KeyRound, ListChecks, LogOut, RefreshCw, Users, Zap } from "lucide-react";
+import { BadgeCheck, BarChart3, CalendarDays, FilePlus2, KeyRound, ListChecks, LogOut, RefreshCw, Trash2, Users, Zap } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import type { Notif, SessionUser, ViewMode } from "@/lib/roles";
@@ -17,6 +17,7 @@ import { ExportButton, fileStamp, rowsSheet } from "./ExportButton";
 import { UsersPanel, type UserAdmin } from "./UsersPanel";
 import type { UserFormResult } from "@/lib/user-input";
 import { SampleForm } from "./SampleForm";
+import { BulkDeleteDialog, type BulkDeleteActions } from "./BulkDeleteDialog";
 import { fmtDate, SampleTable, type SampleActions } from "./SampleTable";
 
 const VIEW_COPY: Record<ViewMode, { title: string; hint: string }> = {
@@ -52,10 +53,12 @@ export function DashboardClient(props: {
   actions: SampleActions & { markNotificationsSeen: () => Promise<void> };
   editor?: SampleEditor; // tambah / edit SPK (hanya untuk role yang berhak)
   userAdmin?: UserAdmin; // kelola pengguna (hanya Kepala Laboratorium)
+  bulkDelete?: BulkDeleteActions; // hapus massal per rentang tanggal (hanya Kepala PPIC)
   changePassword?: (oldPassword: string, newPassword: string) => Promise<UserFormResult>;
   onLogout?: () => Promise<void>;
 }) {
-  const { user, rows, notifs, machines, actions, editor, userAdmin, changePassword, onLogout } = props;
+  const { user, rows, notifs, machines, actions, editor, userAdmin, bulkDelete, changePassword, onLogout } = props;
+  const [bulkOpen, setBulkOpen] = useState(false);
   const copy = VIEW_COPY[user.viewMode];
   const canEdit = !!editor && user.canEditSample;
   const showResults = user.viewMode !== "OPERATOR";
@@ -294,7 +297,15 @@ export function DashboardClient(props: {
                   Menampilkan {visible.length} dari {groupRows.length} pengajuan
                   {filters.machineId !== "ALL" && ` di ${machines.find((m) => m.id === filters.machineId)?.name ?? "kelompok ini"}`}
                 </p>
-                <ExportButton build={() => ({ filename: `DyeLIMS-pengajuan-${fileStamp()}`, sheets: [rowsSheet("Pengajuan", visible, `Daftar pengajuan lab DyeLIMS · diunduh ${fmtDate(todayJakarta())}`)] })} />
+                <span className="flex flex-wrap items-center gap-2">
+                  {bulkDelete && (
+                    <button type="button" onClick={() => setBulkOpen(true)}
+                      className="inline-flex items-center gap-2 rounded-xl bg-white px-3.5 py-2 text-sm font-semibold text-rose-700 ring-1 ring-rose-200 transition hover:bg-rose-50">
+                      <Trash2 className="h-4 w-4" aria-hidden /> Hapus data
+                    </button>
+                  )}
+                  <ExportButton build={() => ({ filename: `DyeLIMS-pengajuan-${fileStamp()}`, sheets: [rowsSheet("Pengajuan", visible, `Daftar pengajuan lab DyeLIMS · diunduh ${fmtDate(todayJakarta())}`)] })} />
+                </span>
               </div>
             </div>
 
@@ -311,6 +322,7 @@ export function DashboardClient(props: {
         </div>
       </footer>
 
+      {bulkOpen && bulkDelete && <BulkDeleteDialog actions={bulkDelete} onClose={() => setBulkOpen(false)} />}
       {pwOpen && changePassword && <PasswordDialog mode="own" onSubmit={changePassword} onClose={() => setPwOpen(false)} />}
       {form && editor && (
         <SampleForm

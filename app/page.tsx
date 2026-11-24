@@ -1,11 +1,11 @@
 import { prisma } from "@/lib/prisma";
 import { getSessionUser } from "@/lib/auth";
 import { buildStandardTimeMap, calculateCR, dateOnlyDayNumber, jakartaDayNumber, sortByPriority, withCR } from "@/lib/cr";
-import { deriveNotifications, type ChangeSource } from "@/lib/roles";
+import { canDeleteSample, deriveNotifications, type ChangeSource } from "@/lib/roles";
 import { DashboardClient } from "@/components/dashboard/DashboardClient";
 import type { PendingChange, SampleRow } from "@/components/dashboard/badges";
 import { changeOwnPassword, createUser, resetUserPassword, updateUser } from "@/app/user-actions";
-import { cancelChange, cancelUrgent, createSample, decideChange, deleteSample, finishProcess, markNotificationsSeen, moveUrgent, requestDelete, requestEdit, startProcess } from "@/app/actions";
+import { cancelChange, cancelUrgent, createSample, decideChange, deleteSample, deleteSamplesByDate, finishProcess, markNotificationsSeen, moveUrgent, previewBulkDelete, requestDelete, requestEdit, startProcess } from "@/app/actions";
 import { logout } from "@/app/login/actions";
 
 export const dynamic = "force-dynamic"; // CR bergantung pada tanggal hari ini → jangan di-cache statis
@@ -129,6 +129,7 @@ export default async function DashboardPage() {
         };
       })}
       actions={{ startProcess, finishProcess, cancelUrgent, moveUrgent, requestDelete, deleteSample, cancelChange, decideChange, markNotificationsSeen }}
+      bulkDelete={canDeleteSample(user.roleCode) ? { preview: previewBulkDelete, run: deleteSamplesByDate } : undefined}
       editor={{
         processTypes: processTypes.map((p) => ({ id: p.id, name: p.name })),
         processMachine: Object.fromEntries(times.map((t) => [t.processTypeId, t.machineId])),
