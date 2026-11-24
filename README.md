@@ -28,9 +28,9 @@ Login memakai **username**. Password awal akun hasil seed: `lims12345` (atau `SE
 | kepala.produksi.df | Kepala Produksi DF | Memantau, laporan kinerja, intervensi (batalkan) urgent. Notifikasi urgent |
 | kepala.ppic | Kepala PPIC | Memantau, laporan kinerja, intervensi (batalkan) urgent. Notifikasi urgent |
 | kalab | Kepala Laboratorium | Memantau, laporan kinerja, intervensi (batalkan) urgent, **Kelola pengguna**. Notifikasi urgent |
-| kasi.ppic | Kepala Seksi PPIC | Mengoperasikan PPIC: mengajukan ke lab (termasuk urgent, scan SPK), minta edit/hapus + laporan kinerja |
+| kasi.ppic | Kepala Seksi PPIC | Mengoperasikan PPIC: mengajukan ke lab (termasuk urgent, scan SPK), atur urutan urgent, minta edit/hapus + laporan kinerja |
 | kaur.ppic | Kepala Urusan PPIC | Mengoperasikan PPIC (sama dengan Kasi PPIC) + laporan kinerja |
-| kasi.lab | Kepala Seksi Laboratorium | Mengoperasikan lab: Proses (pilih grup), Selesai + foto, validasi edit/hapus, urutan urgent + laporan kinerja |
+| kasi.lab | Kepala Seksi Laboratorium | Mengoperasikan lab: Proses (pilih grup), Selesai + foto, validasi edit/hapus + laporan kinerja |
 | admin.lab | Admin Lab | Mengoperasikan lab (sama dengan Kasi Lab), **tanpa** laporan kinerja |
 
 Grup pemroses: ALNI, ATYKAH, SELA · ALFATH, KASIM, NOPAL · PIO, NURJANAH, JELYN · RAHMA, SYIFA, CAHYONO (`lib/processors.ts`).

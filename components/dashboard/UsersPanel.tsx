@@ -40,9 +40,9 @@ export interface UserAdmin {
 export function roleAccess(r: RoleOption): { label: string; tone: string; text: string } {
   const report = REPORT_ROLES.includes(r.code) ? ", melihat laporan kinerja" : ", tanpa laporan kinerja";
   if (r.viewMode === "OPERATOR")
-    return { label: "Operasional lab", tone: "bg-sky-50 text-sky-800 ring-sky-200", text: `Memproses pengajuan, foto hasil uji, validasi edit/hapus, urutan urgent${report}` };
+    return { label: "Operasional lab", tone: "bg-sky-50 text-sky-800 ring-sky-200", text: `Memproses pengajuan, foto hasil uji, validasi edit/hapus${report}` };
   if (r.canEditSample)
-    return { label: "Operasional PPIC", tone: "bg-amber-50 text-amber-800 ring-amber-200", text: `Mengajukan sampel ke lab (termasuk urgent), minta edit/hapus${report}` };
+    return { label: "Operasional PPIC", tone: "bg-amber-50 text-amber-800 ring-amber-200", text: `Mengajukan sampel ke lab (termasuk urgent), mengatur urutan urgent, minta edit/hapus${report}` };
   if (r.canInterveneUrgent)
     return {
       label: r.canManageUsers ? "Kepala + kelola pengguna" : "Kepala (monitoring)",

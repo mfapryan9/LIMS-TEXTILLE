@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { ArrowDown, ArrowUp, Check, CheckCircle2, ChevronsUp, Hourglass, Inbox, Pencil, Play, ShieldCheck, Timer, Trash2, UserRound, Users, X, ZapOff } from "lucide-react";
-import { isLabRole, type SessionUser } from "@/lib/roles";
+import { isLabRole, isPpicRole, type SessionUser } from "@/lib/roles";
 import { PROCESSOR_GROUP_NAMES } from "@/lib/processors";
 import { fmtHours } from "@/lib/report";
 import { CrBadge, MachineChip, StatusBadge, UrgentBadge, fmtDays, rowAccent, type SampleRow } from "./badges";
@@ -16,7 +16,7 @@ export interface SampleActions {
   startProcess: (sampleId: string, processorName: string) => Promise<Result>; // Pengajuan masuk → Sedang diproses (pilih grup)
   finishProcess: (form: FormData) => Promise<Result>; // Sedang diproses → Selesai (+ foto hasil uji)
   cancelUrgent: (sampleId: string, reason: string) => Promise<Result>; // intervensi kepala
-  moveUrgent: (sampleId: string, direction: "up" | "down" | "top") => Promise<Result>; // urutan urgent manual (lab)
+  moveUrgent: (sampleId: string, direction: "up" | "down" | "top") => Promise<Result>; // urutan urgent manual (PPIC)
   requestDelete: (sampleId: string, reason: string) => Promise<Result>; // PPIC: minta hapus (divalidasi lab)
   cancelChange: (changeId: string) => Promise<Result>; // PPIC: batalkan permintaan edit/hapus
   decideChange: (changeId: string, approve: boolean, note: string) => Promise<Result>; // lab: validasi permintaan
@@ -189,7 +189,7 @@ function RowActions({ row, user, actions, onEdit }: { row: SampleRow; user: Sess
   );
 }
 
-/** Lab: geser urutan pengajuan urgent (naik / turun / paling atas). */
+/** PPIC: geser urutan pengajuan urgent (naik / turun / paling atas). */
 function UrgentOrder({ row, actions, isFirst, isLast }: { row: SampleRow; actions: SampleActions; isFirst: boolean; isLast: boolean }) {
   const [pending, start] = useTransition();
   const [error, setError] = useState<string | null>(null);
@@ -289,7 +289,7 @@ export function ProcessInfo({ r }: { r: SampleRow }) {
 
 export function SampleTable({ rows, user, actions, highlightId, onEdit, canReorder }: {
   rows: SampleRow[]; user: SessionUser; actions: SampleActions; highlightId: string | null; onEdit?: (row: SampleRow) => void;
-  canReorder: boolean; // urutan prioritas sedang ditampilkan → lab boleh menggeser urgent
+  canReorder: boolean; // urutan prioritas sedang ditampilkan → PPIC boleh menggeser urgent
 }) {
   if (rows.length === 0)
     return (
@@ -301,7 +301,7 @@ export function SampleTable({ rows, user, actions, highlightId, onEdit, canReord
     );
 
   const urgentIds = rows.filter((r) => r.isUrgent && r.status !== "DISETUJUI").map((r) => r.id);
-  const reorder = canReorder && isLabRole(user.roleCode) && urgentIds.length > 1;
+  const reorder = canReorder && isPpicRole(user.roleCode) && urgentIds.length > 1;
 
   return (
     <div className="scrollbar-thin overflow-x-auto rounded-2xl bg-white shadow-card ring-1 ring-line">
@@ -354,7 +354,7 @@ export function SampleTable({ rows, user, actions, highlightId, onEdit, canReord
                 <td className="px-4 py-4">
                   <div className="flex flex-col items-start gap-1.5">
                     {urgent && <UrgentBadge />}
-                    {urgent && r.urgentRank !== null && <span className="text-[11px] font-medium text-fuchsia-700">Urutan diatur lab</span>}
+                    {urgent && r.urgentRank !== null && <span className="text-[11px] font-medium text-fuchsia-700">Urutan diatur PPIC</span>}
                     {r.status !== "DISETUJUI" && <CrBadge cr={r.cr} urgency={r.urgency} daysLeft={r.daysLeft} />}
                   </div>
                 </td>

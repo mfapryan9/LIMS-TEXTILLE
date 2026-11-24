@@ -67,7 +67,7 @@ describe("sortByPriority", () => {
   });
 });
 
-describe("urutan urgent manual dari lab", () => {
+describe("urutan urgent manual dari PPIC", () => {
   it("urgentRank didahulukan di antara urgent, sisanya tetap urut CR", () => {
     const mk = (id: string, cr: number | null, urgentRank: number | null, isUrgent = true) => ({
       id, status: "MENUNGGU" as const, isUrgent, dueDate: "2026-11-20", createdAt: "2026-11-01", processTypeId: "p", machineId: "m",

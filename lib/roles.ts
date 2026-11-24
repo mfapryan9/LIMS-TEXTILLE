@@ -21,8 +21,8 @@ export interface SessionUser {
  * Seed untuk tabel roles (aktor Sprint 4).
  * - Kepala Produksi DF, Kepala PPIC, Kepala Laboratorium: memantau, melihat laporan kinerja, dan mengintervensi
  *   (membatalkan) urgent. Kepala Laboratorium juga mengelola akun.
- * - Kepala Seksi PPIC & Kepala Urusan PPIC: mengoperasikan sisi PPIC (mengajukan ke lab, minta edit/hapus) + laporan kinerja.
- * - Kepala Seksi Laboratorium: mengoperasikan sisi lab (proses, selesai + foto, validasi, urutan urgent) + laporan kinerja.
+ * - Kepala Seksi PPIC & Kepala Urusan PPIC: mengoperasikan sisi PPIC (mengajukan ke lab, minta edit/hapus, urutan urgent) + laporan kinerja.
+ * - Kepala Seksi Laboratorium: mengoperasikan sisi lab (proses, selesai + foto, validasi edit/hapus) + laporan kinerja.
  * - Admin Lab: mengoperasikan sisi lab, tanpa laporan kinerja.
  */
 export const ROLE_SEED = [
@@ -35,9 +35,9 @@ export const ROLE_SEED = [
   { code: "ADMIN_LAB", name: "Admin Lab", viewMode: "OPERATOR" },
 ] as const;
 
-/** Operasional lab: notifikasi pengajuan masuk/urgent/validasi, memproses, memvalidasi edit/hapus, mengatur urutan urgent. */
+/** Operasional lab: notifikasi pengajuan masuk/urgent/validasi, memproses, memvalidasi edit/hapus. */
 export const LAB_ROLES = ["ADMIN_LAB", "KASI_LAB"];
-/** Operasional PPIC: mengajukan ke lab; notifikasi pengajuan selesai & hasil validasi. */
+/** Operasional PPIC: mengajukan ke lab, mengatur urutan urgent; notifikasi pengajuan selesai & hasil validasi. */
 export const PPIC_ROLES = ["KASI_PPIC", "KAUR_PPIC"];
 /** Laporan kinerja: seluruh kepala, Kasi & Kaur PPIC, Kasi Lab (Admin Lab tidak). */
 export const REPORT_ROLES = ["KEPALA_PRODUKSI_DF", "KEPALA_PPIC", "KALAB", "KASI_PPIC", "KAUR_PPIC", "KASI_LAB"];
@@ -56,8 +56,11 @@ export type Permission =
   | "submitRequest" | "processRequest" | "interveneUrgent" | "markUrgent" | "manageUsers" | "manageMaster"
   | "validateChange" | "reorderUrgent";
 
-/** Bagian lab: memvalidasi permintaan edit/hapus PPIC dan mengatur urutan urgent. */
+/** Bagian lab: memvalidasi permintaan edit/hapus PPIC. */
 export const isLabRole = (roleCode: string) => LAB_ROLES.includes(roleCode);
+
+/** PPIC (Kasi & Kaur): mengatur urutan antar-pengajuan urgent karena PPIC yang mengetahui kebutuhan produksi. */
+export const isPpicRole = (roleCode: string) => PPIC_ROLES.includes(roleCode);
 
 /** SERVER-SIDE guard: panggil di setiap server action / route handler. UI hanya menyembunyikan tombol. */
 export function assertCan(user: SessionUser, action: Permission) {
@@ -68,7 +71,8 @@ export function assertCan(user: SessionUser, action: Permission) {
     (action === "markUrgent" && user.canMarkUrgent) ||
     (action === "manageUsers" && user.canManageUsers) ||
     (action === "manageMaster" && user.canManageMaster) ||
-    ((action === "validateChange" || action === "reorderUrgent") && isLabRole(user.roleCode));
+    (action === "validateChange" && isLabRole(user.roleCode)) ||
+    (action === "reorderUrgent" && isPpicRole(user.roleCode));
   if (!ok) throw new Error("FORBIDDEN");
 }
 

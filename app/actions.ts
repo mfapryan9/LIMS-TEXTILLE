@@ -377,7 +377,7 @@ export async function decideChange(changeId: string, approve: boolean, note: str
   }
 }
 
-// ───────────── Urutan urgent manual (bagian lab) ─────────────
+// ───────────── Urutan urgent manual (PPIC) ─────────────
 
 /** Geser pengajuan urgent ke atas / bawah / paling atas di antara pengajuan urgent aktif. */
 export async function moveUrgent(sampleId: string, direction: "up" | "down" | "top"): Promise<ActionResult> {

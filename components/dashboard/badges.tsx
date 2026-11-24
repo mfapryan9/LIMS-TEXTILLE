@@ -37,7 +37,7 @@ export type SampleRow = {
   parties: string[]; // Nomor partai
   requesterName: string | null; // Nama yang mengajukan
   urgentAt: string | null; // ISO
-  urgentRank: number | null; // urutan manual antar-urgent dari lab
+  urgentRank: number | null; // urutan manual antar-urgent dari PPIC
   pendingChange: PendingChange | null;
   processorName: string | null; // nama operator yang memproses (Sprint 3)
   processStartedAt: string | null; // ISO

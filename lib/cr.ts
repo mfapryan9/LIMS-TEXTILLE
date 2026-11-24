@@ -119,7 +119,7 @@ export interface SchedulableSample {
   createdAt: Date | string;
   processTypeId: string;
   machineId: string;
-  urgentRank?: number | null; // urutan manual antar-urgent (diatur lab)
+  urgentRank?: number | null; // urutan manual antar-urgent (diatur PPIC)
 }
 
 export type StandardTimeMap = Map<string, number>; // key: `${processTypeId}:${machineId}`
@@ -148,7 +148,7 @@ export function withCR<T extends SchedulableSample>(
 
 /**
  * Urutan antrean (4 kelompok):
- *   0. Sampel aktif yang ditandai URGENT (selalu paling atas). Urutan manual dari lab (urgentRank) didahulukan,
+ *   0. Sampel aktif yang ditandai URGENT (selalu paling atas). Urutan manual dari PPIC (urgentRank) didahulukan,
  *      urgent tanpa urutan manual menyusul berdasarkan CR.
  *   1. Sampel aktif dengan CR (CR terkecil di atas; CR negatif = terlambat paling atas)
  *   2. Sampel aktif tanpa CR (p belum diatur), diurutkan berdasarkan due date

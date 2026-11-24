@@ -69,11 +69,18 @@ describe("permintaan edit / hapus PPIC divalidasi lab (Sprint 4)", () => {
     expect(n[1].detail).toContain("sudah dicelup");
   });
 
-  it("hanya bagian lab yang boleh memvalidasi dan menggeser urutan urgent", () => {
+  it("hanya bagian lab yang boleh memvalidasi edit/hapus", () => {
     const u = (roleCode: string, viewMode: SessionUser["viewMode"]) => ({ roleCode, viewMode } as SessionUser);
     expect(() => assertCan(u("ADMIN_LAB", "OPERATOR"), "validateChange")).not.toThrow();
-    expect(() => assertCan(u("KASI_LAB", "OPERATOR"), "reorderUrgent")).not.toThrow();
     expect(() => assertCan(u("KAUR_PPIC", "PLANNER"), "validateChange")).toThrow("FORBIDDEN");
+  });
+
+  it("hanya Kasi dan Kaur PPIC yang boleh menggeser urutan urgent", () => {
+    const u = (roleCode: string, viewMode: SessionUser["viewMode"]) => ({ roleCode, viewMode } as SessionUser);
+    expect(() => assertCan(u("KASI_PPIC", "PLANNER"), "reorderUrgent")).not.toThrow();
+    expect(() => assertCan(u("KAUR_PPIC", "PLANNER"), "reorderUrgent")).not.toThrow();
+    expect(() => assertCan(u("KASI_LAB", "OPERATOR"), "reorderUrgent")).toThrow("FORBIDDEN");
+    expect(() => assertCan(u("ADMIN_LAB", "OPERATOR"), "reorderUrgent")).toThrow("FORBIDDEN");
     expect(() => assertCan(u("KALAB", "MONITOR"), "reorderUrgent")).toThrow("FORBIDDEN");
     expect(() => assertCan(u("KEPALA_PPIC", "MONITOR"), "reorderUrgent")).toThrow("FORBIDDEN");
   });
