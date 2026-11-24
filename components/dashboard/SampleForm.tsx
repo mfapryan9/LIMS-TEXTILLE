@@ -331,7 +331,7 @@ export function SampleForm(props: {
                   <button type="button" disabled={ocr.state === "running"} onClick={() => setCamera(true)} className={primaryBtn}>
                     <Camera className="h-4 w-4" aria-hidden /> Kamera
                   </button>
-                  <label className={`${ghostBtn} cursor-pointer`}>
+                  <label className={`${ghostBtn} relative cursor-pointer`}>
                     <Upload className="h-4 w-4" aria-hidden /> Unggah
                     <input type="file" accept="image/*,.qrp,.QRP" className="sr-only" disabled={ocr.state === "running"}
                       onChange={(e) => { const f = e.target.files?.[0]; e.target.value = ""; if (f) scan(f); }} />
@@ -454,7 +454,7 @@ export function SampleForm(props: {
                 <input type="date" value={values.dueDate} min={values.receivedDate} onChange={(e) => set("dueDate", e.target.value)} className={ring("dueDate")} />
               </Field>
               {canMarkUrgent && (
-                <label className={`flex cursor-pointer items-center gap-3 rounded-xl p-3 ring-1 transition sm:col-span-2 ${values.isUrgent ? "bg-fuchsia-50 ring-fuchsia-300" : "bg-white ring-line hover:bg-canvas"}`}>
+                <label className={`relative flex cursor-pointer items-center gap-3 rounded-xl p-3 ring-1 transition sm:col-span-2 ${values.isUrgent ? "bg-fuchsia-50 ring-fuchsia-300" : "bg-white ring-line hover:bg-canvas"}`}>
                   <input type="checkbox" checked={values.isUrgent} onChange={(e) => set("isUrgent", e.target.checked)} className="peer sr-only" />
                   <span aria-hidden className={`relative h-6 w-11 shrink-0 rounded-full transition peer-focus-visible:ring-4 peer-focus-visible:ring-fuchsia-200 ${values.isUrgent ? "bg-gradient-to-r from-fuchsia-600 to-pink-500" : "bg-line"}`}>
                     <span className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-all ${values.isUrgent ? "left-[22px]" : "left-0.5"}`} />

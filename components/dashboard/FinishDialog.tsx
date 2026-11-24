@@ -73,11 +73,11 @@ export function FinishDialog({ row, onSubmit, onClose }: { row: SampleRow; onSub
             )}
           </div>
           <div className="mt-2 grid grid-cols-2 gap-2">
-            <label className={`${primaryBtn} cursor-pointer`}>
+            <label className={`${primaryBtn} relative cursor-pointer`}>
               <Camera className="h-4 w-4" aria-hidden /> Kamera
               <input type="file" accept="image/*" capture="environment" className="sr-only" onChange={(e) => { pick(e.target.files?.[0]); e.target.value = ""; }} />
             </label>
-            <label className={`${ghostBtn} cursor-pointer`}>
+            <label className={`${ghostBtn} relative cursor-pointer`}>
               <ImageUp className="h-4 w-4" aria-hidden /> Unggah foto
               <input type="file" accept="image/jpeg,image/png,image/webp" className="sr-only" onChange={(e) => { pick(e.target.files?.[0]); e.target.value = ""; }} />
             </label>
