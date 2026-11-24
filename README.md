@@ -26,7 +26,7 @@ Login memakai **username**. Password awal akun hasil seed: `lims12345` (atau `SE
 | Username | Peran | Hak (aktor Sprint 4) |
 |---|---|---|
 | kepala.produksi.df | Kepala Produksi DF | Memantau, laporan kinerja, intervensi (batalkan) urgent. Notifikasi urgent |
-| kepala.ppic | Kepala PPIC | Memantau, laporan kinerja, intervensi (batalkan) urgent. Notifikasi urgent |
+| kepala.ppic | Kepala PPIC | Memantau, laporan kinerja, intervensi (batalkan) urgent, **hapus data pengajuan**. Notifikasi urgent |
 | kalab | Kepala Laboratorium | Memantau, laporan kinerja, intervensi (batalkan) urgent, **Kelola pengguna**. Notifikasi urgent |
 | kasi.ppic | Kepala Seksi PPIC | Mengoperasikan PPIC: mengajukan ke lab (termasuk urgent, scan SPK), atur urutan urgent, minta edit/hapus + laporan kinerja |
 | kaur.ppic | Kepala Urusan PPIC | Mengoperasikan PPIC (sama dengan Kasi PPIC) + laporan kinerja |

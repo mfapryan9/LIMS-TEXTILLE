@@ -5,7 +5,7 @@ import { deriveNotifications, type ChangeSource } from "@/lib/roles";
 import { DashboardClient } from "@/components/dashboard/DashboardClient";
 import type { PendingChange, SampleRow } from "@/components/dashboard/badges";
 import { changeOwnPassword, createUser, resetUserPassword, updateUser } from "@/app/user-actions";
-import { cancelChange, cancelUrgent, createSample, decideChange, finishProcess, markNotificationsSeen, moveUrgent, requestDelete, requestEdit, startProcess } from "@/app/actions";
+import { cancelChange, cancelUrgent, createSample, decideChange, deleteSample, finishProcess, markNotificationsSeen, moveUrgent, requestDelete, requestEdit, startProcess } from "@/app/actions";
 import { logout } from "@/app/login/actions";
 
 export const dynamic = "force-dynamic"; // CR bergantung pada tanggal hari ini → jangan di-cache statis
@@ -128,7 +128,7 @@ export default async function DashboardPage() {
           processes: processTypes.filter((p) => own.some((t) => t.processTypeId === p.id)).map((p) => p.name),
         };
       })}
-      actions={{ startProcess, finishProcess, cancelUrgent, moveUrgent, requestDelete, cancelChange, decideChange, markNotificationsSeen }}
+      actions={{ startProcess, finishProcess, cancelUrgent, moveUrgent, requestDelete, deleteSample, cancelChange, decideChange, markNotificationsSeen }}
       editor={{
         processTypes: processTypes.map((p) => ({ id: p.id, name: p.name })),
         processMachine: Object.fromEntries(times.map((t) => [t.processTypeId, t.machineId])),

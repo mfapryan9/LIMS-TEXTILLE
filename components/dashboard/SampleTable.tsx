@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { ArrowDown, ArrowUp, Check, CheckCircle2, ChevronsUp, Hourglass, Inbox, Pencil, Play, ShieldCheck, Timer, Trash2, UserRound, Users, X, ZapOff } from "lucide-react";
-import { isLabRole, isPpicRole, type SessionUser } from "@/lib/roles";
+import { canDeleteSample, isLabRole, isPpicRole, type SessionUser } from "@/lib/roles";
 import { PROCESSOR_GROUP_NAMES } from "@/lib/processors";
 import { fmtHours } from "@/lib/report";
 import { CrBadge, MachineChip, StatusBadge, UrgentBadge, fmtDays, rowAccent, type SampleRow } from "./badges";
@@ -18,6 +18,7 @@ export interface SampleActions {
   cancelUrgent: (sampleId: string, reason: string) => Promise<Result>; // intervensi kepala
   moveUrgent: (sampleId: string, direction: "up" | "down" | "top") => Promise<Result>; // urutan urgent manual (PPIC)
   requestDelete: (sampleId: string, reason: string) => Promise<Result>; // PPIC: minta hapus (divalidasi lab)
+  deleteSample: (sampleId: string, reason: string) => Promise<Result>; // Kepala PPIC: hapus langsung
   cancelChange: (changeId: string) => Promise<Result>; // PPIC: batalkan permintaan edit/hapus
   decideChange: (changeId: string, approve: boolean, note: string) => Promise<Result>; // lab: validasi permintaan
 }
@@ -174,15 +175,35 @@ function PlannerActions({ row, actions, onEdit }: { row: SampleRow; actions: Sam
   );
 }
 
+/** Kepala PPIC: hapus data pengajuan secara langsung (wajib alasan, tercatat di audit log). */
+function HeadDelete({ row, actions }: { row: SampleRow; actions: SampleActions }) {
+  const [open, setOpen] = useState(false);
+  const [reason, setReason] = useState("");
+  const { pending, run, err } = useRun(() => { setOpen(false); setReason(""); });
+  const name = row.orderNo ?? row.spkNo;
+  return open ? (
+    <>
+      <span className="basis-full text-right text-[11px] font-medium text-rose-700">Hapus permanen order {name} beserta hasil uji dan fotonya?</span>
+      <InlineForm label="Alasan penghapusan" value={reason} onChange={setReason} onCancel={() => setOpen(false)}
+        submit="Hapus permanen" disabled={pending || !reason.trim()} onSubmit={() => run(() => actions.deleteSample(row.id, reason))} />
+      {err}
+    </>
+  ) : (
+    <button className={danger} onClick={() => setOpen(true)} aria-label={`Hapus data pengajuan ${name}`}><Trash2 className={icon} aria-hidden />Hapus</button>
+  );
+}
+
 function RowActions({ row, user, actions, onEdit }: { row: SampleRow; user: SessionUser; actions: SampleActions; onEdit?: (row: SampleRow) => void }) {
   const lab = isLabRole(user.roleCode);
-  const hasAction = user.viewMode === "OPERATOR" || (user.canInterveneUrgent && row.isUrgent && row.status !== "DISETUJUI") || !!onEdit || (lab && !!row.pendingChange);
+  const canDelete = canDeleteSample(user.roleCode);
+  const hasAction = user.viewMode === "OPERATOR" || (user.canInterveneUrgent && row.isUrgent && row.status !== "DISETUJUI") || !!onEdit || (lab && !!row.pendingChange) || canDelete;
   return (
     <span className="flex flex-col items-end gap-2">
       {row.pendingChange && <ChangeReview row={row} actions={actions} canDecide={lab} />}
       <span className="flex flex-wrap items-center justify-end gap-1.5">
         <RoleActions row={row} user={user} actions={actions} />
         {onEdit && <PlannerActions row={row} actions={actions} onEdit={onEdit} />}
+        {canDelete && <HeadDelete row={row} actions={actions} />}
         {!hasAction && !row.pendingChange && <span className="text-xs text-ink-soft">Hanya pantau</span>}
       </span>
     </span>

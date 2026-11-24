@@ -1,6 +1,6 @@
 "use client";
 
-import { REPORT_ROLES } from "@/lib/roles";
+import { REPORT_ROLES, SAMPLE_DELETE_ROLES } from "@/lib/roles";
 
 import { useMemo, useState, useTransition, type FormEvent } from "react";
 import { KeyRound, Loader2, Pencil, Search, ShieldCheck, UserPlus, Users } from "lucide-react";
@@ -47,7 +47,11 @@ export function roleAccess(r: RoleOption): { label: string; tone: string; text: 
     return {
       label: r.canManageUsers ? "Kepala + kelola pengguna" : "Kepala (monitoring)",
       tone: "bg-emerald-50 text-emerald-800 ring-emerald-200",
-      text: r.canManageUsers ? "Monitoring, laporan kinerja, membatalkan urgent, dan kelola akun pengguna" : "Monitoring, laporan kinerja, dan membatalkan urgent",
+      text: r.canManageUsers
+        ? "Monitoring, laporan kinerja, membatalkan urgent, dan kelola akun pengguna"
+        : SAMPLE_DELETE_ROLES.includes(r.code)
+          ? "Monitoring, laporan kinerja, membatalkan urgent, dan menghapus data pengajuan"
+          : "Monitoring, laporan kinerja, dan membatalkan urgent",
     };
   return { label: "Monitor", tone: "bg-stone-100 text-stone-700 ring-stone-300", text: "Hanya pantau pengajuan & hasil uji" };
 }

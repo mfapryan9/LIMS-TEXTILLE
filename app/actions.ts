@@ -323,6 +323,28 @@ export async function requestDelete(sampleId: string, reason: string): Promise<A
   return { ok: true };
 }
 
+/**
+ * Kepala PPIC menghapus data pengajuan secara langsung (status apa pun, tanpa validasi lab). Wajib alasan.
+ * Salinan data sebelum dihapus disimpan di audit log; data uji & foto ikut terhapus, permintaan edit/hapus
+ * yang masih menunggu untuk pengajuan ini dibatalkan.
+ */
+export async function deleteSample(sampleId: string, reason: string): Promise<ActionResult> {
+  const user = await getSessionUser();
+  assertCan(user, "deleteSample");
+  const why = String(reason ?? "").trim().slice(0, 300);
+  if (!why) return { ok: false, error: "Alasan penghapusan wajib diisi" };
+  const res = await prisma.$transaction(async (tx): Promise<ActionResult> => {
+    const s = await tx.sample.findUnique({ where: { id: sampleId } });
+    if (!s) return { ok: false, error: "Pengajuan tidak ditemukan atau sudah dihapus" };
+    await tx.changeRequest.deleteMany({ where: { sampleId, status: "PENDING" } });
+    await audit(tx, user.id, s.id, "SAMPLE_DELETED", "Sample", s.id, JSON.parse(JSON.stringify(s)), { reason: why, deletedBy: user.roleCode });
+    await tx.sample.delete({ where: { id: s.id } }); // uji & foto ikut terhapus (cascade), relasi audit_logs → null
+    return { ok: true };
+  }, { timeout: 20000 });
+  if (res.ok) revalidatePath("/");
+  return res;
+}
+
 /** PPIC membatalkan permintaannya selama belum divalidasi lab. */
 export async function cancelChange(changeId: string): Promise<ActionResult> {
   const user = await getSessionUser();

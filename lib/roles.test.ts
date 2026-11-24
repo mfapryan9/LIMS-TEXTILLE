@@ -84,6 +84,13 @@ describe("permintaan edit / hapus PPIC divalidasi lab (Sprint 4)", () => {
     expect(() => assertCan(u("KALAB", "MONITOR"), "reorderUrgent")).toThrow("FORBIDDEN");
     expect(() => assertCan(u("KEPALA_PPIC", "MONITOR"), "reorderUrgent")).toThrow("FORBIDDEN");
   });
+
+  it("hanya Kepala PPIC yang boleh menghapus data pengajuan secara langsung", () => {
+    const u = (roleCode: string, viewMode: SessionUser["viewMode"]) => ({ roleCode, viewMode } as SessionUser);
+    expect(() => assertCan(u("KEPALA_PPIC", "MONITOR"), "deleteSample")).not.toThrow();
+    const others = [["KEPALA_PRODUKSI_DF", "MONITOR"], ["KALAB", "MONITOR"], ["KASI_PPIC", "PLANNER"], ["KAUR_PPIC", "PLANNER"], ["KASI_LAB", "OPERATOR"], ["ADMIN_LAB", "OPERATOR"]] as const;
+    for (const [code, mode] of others) expect(() => assertCan(u(code, mode), "deleteSample")).toThrow("FORBIDDEN");
+  });
 });
 
 describe("aktor Sprint 4", () => {
